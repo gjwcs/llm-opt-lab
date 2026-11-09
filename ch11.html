@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 11 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch11.js"></script>
+</head>
+<body data-chapter="11">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="lowrank" data-title="斜率天生是扁的">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">训练 $t$ 步后的斜率矩阵</span></div>
+        <div id="l-t"></div>
+        <div id="l-r"></div>
+        <div id="l-kappa"></div>
+        <div class="btn-row"><button class="btn teal" id="l-play">▶ 让时间流动</button><button class="btn ghost" id="l-seed">重新采样</button></div>
+        <div class="caption">玩具模型：$32\times32$ 的权重做梯度下降（$\eta=0.5$）。32 个输入方向里，绝大多数是“快方向”（曲率 $\lambda_j$ 在 0.1 到 1 之间），只有少数几条“慢走廊”（曲率在 0.001 到 0.01 之间）。第 $t$ 步的斜率是 $\mathbf G_t=\mathbf E_0\,\mathbf Q\operatorname{diag}\big(\lambda_j(1-\eta\lambda_j)^t\big)\mathbf Q^\top$，奇异值用 Jacobi SVD 实测。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">σ</span><span class="ct">斜率矩阵 $\mathbf G_t$ 的奇异值（除以最大的 $\sigma_1$）</span></div>
+          <div class="viz h260" id="l-bars"></div>
+          <div class="legend"><span><i style="background:var(--c6)"></i>GaLore 保留的前 $r$ 条走廊</span><span><i style="background:#cfd6de"></i>被投影丢掉的部分</span></div>
+        </div>
+        <div class="stats" id="l-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">%</span><span class="ct">前 $r$ 条走廊装下的能量</span></div>
+            <div class="viz h260" id="l-energy"></div>
+            <div class="caption">横轴是训练步数（对数刻度），竖线是当前的 $t$。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c5)">▦</span><span class="ct">$\mathbf G_t$ 与它的秩 $r$ 投影 $\mathbf P\mathbf P^\top\mathbf G_t$</span></div>
+            <div class="viz h260" id="l-heat"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\frac{\sigma_i(\mathbf{G}_t)}{\sigma_1(\mathbf{G}_t)} \le C_0 \exp\big(-(\lambda_i - \lambda_1)\eta t\big) \xrightarrow{t \to \infty} 0 \qquad (\forall \, i > r, \; \lambda_i > \lambda_1)$$</div>
+          <div class="formula">$$\mathbf{R}_t = \mathbf{P}_t^\top \mathbf{G}_t \in \mathbb{R}^{r \times n},\qquad \mathbf{P}_t = \mathbf{U}_{t,[:, 1:r]},\qquad \text{能量占比}=\frac{\|\mathbf P_t^\top\mathbf G_t\|_F^2}{\|\mathbf G_t\|_F^2}=\frac{\sum_{i\le r}\sigma_i^2}{\sum_i\sigma_i^2}$$</div>
+          <p class="small muted" style="margin-bottom:0">每个方向的斜率按 $(1-\eta\lambda_j)^t\approx e^{-\eta\lambda_j t}$ 衰减，曲率越大的方向衰减得越快，跑一段时间后只剩少数几条“慢走廊”还有斜率。于是只给 $r\times n$ 的小卡片 $\mathbf R_t$ 记 Adam 账本，就能装下绝大部分信息。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>把 $t$ 拖到 0：刚开始斜率是“圆的”，32 个方向都有份，前 3 条走廊只装下一小部分能量。</li>
+            <li>点“让时间流动”：快方向的斜率按 $e^{-\eta\lambda t}$ 很快消失，一两百步之后只剩 3 条慢走廊还有斜率，$r=3$ 就装下了 99% 以上的能量。</li>
+            <li>把 $r$ 调到 1，再把 $t$ 拉到最后：三条慢走廊之间也在赛跑，最终只剩曲率最小的那一条，秩 1 就装下全部能量，正是公式里 $t\to\infty$ 的情形。</li>
+            <li>把慢走廊调到 12 条而 $r$ 保持 3：走廊不够宽，能量占比上不去，这时就得加大 $r$，或者像 GaLore 那样隔一段时间换一批走廊。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="galore" data-title="GaLore 换走廊">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">用宽度 $r$ 的手电筒拼满秩矩阵</span></div>
+        <div class="control"><div class="control-head"><span>目标矩阵 $\mathbf W^*$（$8\times8$）</span></div><div id="g-target"></div></div>
+        <div id="g-r"></div>
+        <div id="g-T"></div>
+        <div id="g-lr"></div>
+        <div id="g-steps"></div>
+        <div id="g-at"></div>
+        <div class="caption">与书中零算力实战相同：从 $\mathbf W_0=\mathbf 0$ 出发最小化 $\tfrac12\|\mathbf W-\mathbf W^*\|_F^2$，斜率 $\mathbf G=\mathbf W-\mathbf W^*$；每隔 $T$ 步用 SVD 取最陡的 $r$ 列 $\mathbf P$，然后 $\mathbf W\leftarrow\mathbf W-\eta\,\mathbf P(\mathbf P^\top\mathbf G)$。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">ℒ</span><span class="ct">损失曲线</span></div>
+          <div class="viz h300" id="g-loss"></div>
+          <div class="legend"><span><i style="background:var(--c3)"></i>GaLore：每 $T$ 步换走廊</span><span><i style="background:var(--c2)"></i>GaLore：只用第一条走廊（从不换）</span><span><i style="background:var(--c4);height:2px"></i>LoRA 秩 $r$ 的理论极限 $\tfrac12\sum_{i>r}\sigma_i^2$</span><span><i style="background:var(--slate)"></i>全量梯度下降</span></div>
+        </div>
+        <div class="stats" id="g-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">▦</span><span class="ct">第 <span id="g-at-lab">60</span> 步：权重、当前走廊与奇异值</span></div>
+          <div class="viz h260" id="g-heat"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{aligned}&\mathbf{R}_t = \mathbf{P}_t^\top \mathbf{G}_t,\quad \mathbf{M}_t = \beta_1 \mathbf{M}_{t-1} + (1-\beta_1)\mathbf{R}_t,\quad \mathbf{V}_t = \beta_2 \mathbf{V}_{t-1} + (1-\beta_2)\mathbf{R}_t^{\odot 2}\\ &\mathbf{W}_{t+1} = \mathbf{W}_t - \eta \, \mathbf{P}_t \tfrac{\hat{\mathbf{M}}_t}{\sqrt{\hat{\mathbf{V}}_t} + \epsilon}\\ &\mathbf{W}_T = \mathbf{W}_0 - \eta \sum_{k=0}^{K-1} \mathbf{P}_{k} \Big( \sum_{t} \tilde{\mathbf{N}}_t \Big), \qquad \operatorname{rank}(\mathbf{W}_T - \mathbf{W}_0) \le \min\big(m, n, K r\big)\end{aligned}$$</div>
+          <p class="small muted" style="margin-bottom:0">LoRA 把权重永久写成 $\mathbf B\mathbf A$，秩永远 $\le r$，所以误差至少是 Eckart-Young 给出的 $\tfrac12\sum_{i>r}\sigma_i^2$；GaLore 直接改整张 $\mathbf W$，只是每一段时间只沿 $r$ 条走廊记账，换了 $K$ 次走廊之后，累积更新的秩可以到 $Kr$。本页为了看清几何只用“投影 + 梯度下降”（与书中脚本相同），真实 GaLore 在小卡片上跑的是 Adam。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认就是书中脚本：$\mathbf W^*=\operatorname{diag}(8,7,\dots,1)$，$r=2$，每 15 步换一次走廊，学习率 0.25，走 60 步。LoRA 秩 2 的极限是 $\tfrac12(6^2+5^2+\dots+1^2)=45.5$，GaLore 换 4 次走廊后损失降到约 $0.018$。</li>
+            <li>把 $T$ 拉到最右（从不换）：GaLore 也被困在第一条走廊里，损失停在 45.5，和 LoRA 一样。</li>
+            <li>拖动“看第几步”：每到换走廊的时刻，右图里被点亮的走廊就换成当前最陡的两个方向，权重矩阵的对角线一段一段被填满。</li>
+            <li>切换到“随机满秩矩阵”：最陡的方向不再是坐标轴，走廊是斜的，但同样能一段一段拼出满秩答案。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="memory" data-title="单卡显存账单">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">选模型、选显卡</span></div>
+        <div class="control"><div class="control-head"><span>模型规模</span></div><div id="m-model"></div></div>
+        <div class="control"><div class="control-head"><span>显卡容量</span></div><div id="m-gpu"></div></div>
+        <div id="m-r"></div>
+        <div id="m-lora"></div>
+        <div class="caption">只算权重、斜率、主权重备份与优化器账本，不含激活值与临时缓冲。LoRA 挂在每层全部 7 个线性层上；BAdam 每次只解冻 1 层（共 $L$ 层轮流坐庄）；GaLore 的投影矩阵 $\mathbf P$ 很小，略去不计。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">GB</span><span class="ct">五位房客的房租</span></div>
+          <div class="viz h420" id="m-bars"></div>
+          <div class="legend"><span><i style="background:var(--slate)"></i>BF16 权重</span><span><i style="background:var(--c2)"></i>斜率</span><span><i style="background:var(--c5)"></i>FP32 主权重备份</span><span><i style="background:var(--c4)"></i>优化器账本 $\mathbf m,\mathbf v$</span><span><i style="background:var(--c4);height:2px"></i>显卡容量</span></div>
+        </div>
+        <div class="stats" id="m-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">⏱</span><span class="ct">一步训练里的显存时间轴</span><span class="sub">对数纵轴 · 反向传播从第 $L$ 层算回第 1 层</span></div>
+          <div class="viz h260" id="m-time"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>传统 AdamW：斜率越堆越高，最后统一更新</span><span><i style="background:var(--c3)"></i>LOMO：算完一层当场更新、立刻扔掉斜率</span><span><i style="background:var(--c1)"></i>BAdam：只有坐庄的那层算斜率、记账</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}M_{\text{static}} = \underbrace{2\Psi}_{\text{BF16 权重}} + \underbrace{2\Psi}_{\text{BF16 斜率}} + \underbrace{4\Psi}_{\text{FP32 主权重}} + \underbrace{4\Psi}_{\mathbf{m}_t} + \underbrace{4\Psi}_{\mathbf{v}_t} = 16\Psi \\ \xrightarrow{\text{GaLore + 纯 BF16 权重}} \quad \Big(4 + 8\frac{r}{m}\Big)\Psi\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">LOMO 砍掉斜率常驻与全部账本；8-bit Adam 把 $\mathbf m,\mathbf v$ 从 4 字节压成 1 字节；BAdam 把斜率与账本除以层数 $L$；GaLore 把账本乘上压缩比 $r/m$。LoRA 冻结原权重，只给极少的外挂参数记账，但更新的秩被锁死在 $r$。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认 7B、24 GB 显卡：标准 AdamW 要 112 GB，紧凑配置 56 GB，都放不下；GaLore（$r=128$，$m=4096$）是 $(4+8/32)\times7=29.75$ GB，还差一点。</li>
+            <li>GaLore 再配上“逐层算完就更新”，按书中的账只剩 14 GB 权重 + 1.75 GB 小账本 = 15.75 GB，本页再加上一层斜率约 16.2 GB，装得进 24 GB 游戏卡。GaLore 论文用 8 比特版加逐层更新实测约 22 GB，证明了 7B 预训练在一张 24 GB 显卡上装得下（论文里真正的 7B 预训练是在 A100 上跑的）。</li>
+            <li>把 GaLore 的秩 $r$ 拉到 4096：压缩比变成 1，账本又回到 $8\Psi$。</li>
+            <li>看时间轴：传统流程的斜率在反向传播中越堆越高；LOMO 是一排小锯齿；BAdam 只有轮到坐庄的那一层才多出一个台阶。</li>
+            <li>切到 70B：所有方案都放不进单张显卡，这就是第 15 章 ZeRO 要解决的问题。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

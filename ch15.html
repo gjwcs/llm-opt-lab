@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 15 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch15.js"></script>
+</head>
+<body data-chapter="15">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="zero" data-title="ZeRO 显存计算器">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">多少张卡、多大模型？</span></div>
+        <div id="z-psi"></div>
+        <div id="z-n"></div>
+        <div class="control"><div class="control-head"><span>每张卡的显存</span></div><div id="z-gpu"></div></div>
+        <div class="control"><div class="control-head"><span>优化器</span></div><div id="z-opt"></div></div>
+        <div class="btn-row"><button class="btn ghost" id="z-book">书中：70B · 64 卡</button></div>
+        <div class="caption">按书中口径：$1\,\text{GB}\approx10^9$ 字节；BF16 参数与斜率各 2 字节，AdamW 的 FP32 主权重 + $\mathbf m$ + $\mathbf v$ 共 12 字节（Muon / Lion 只存一阶动量，8 字节）。不含激活值。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">GB</span><span class="ct">每张卡要放多少？</span></div>
+          <div class="viz h260" id="z-bars"></div>
+          <div class="legend"><span><i style="background:var(--slate)"></i>参数 $2\Psi$</span><span><i style="background:var(--c2)"></i>斜率 $2\Psi$</span><span><i style="background:var(--c4)"></i>优化器账本 $12\Psi$</span><span><i style="background:var(--c4);height:2px"></i>单卡容量</span></div>
+        </div>
+        <div class="stats" id="z-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">📚</span><span class="ct">4 个室友合用一套 16 本的复习资料</span><span class="sub">每人书架只能放 6 本</span></div>
+          <div class="control" style="margin-top:0"><div id="z-stage"></div></div>
+          <div class="viz h260" id="z-shelf"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">Σ</span><span class="ct">书桌太小：梯度累积</span></div>
+          <div class="row2">
+            <div>
+              <div id="g-b"></div>
+              <div id="g-B"></div>
+              <div id="g-forget"></div>
+            </div>
+            <div class="stats" id="g-stats"></div>
+          </div>
+          <div id="g-demo" class="formula" style="border-left-color:var(--c3)"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{aligned} M_{\text{DDP}} &= 2\Psi + 2\Psi + 12\Psi = 16\Psi, & M_{\text{ZeRO-1}} &= 2\Psi + 2\Psi + \frac{12\Psi}{N_d}, \\ M_{\text{ZeRO-2}} &= 2\Psi + \frac{2\Psi + 12\Psi}{N_d}, & M_{\text{ZeRO-3}} &= \frac{16\Psi}{N_d} \end{aligned}$$</div>
+          <div class="formula">$$B_{\text{global}} = N_d \times b_{\text{micro}} \times K_{\text{accum}},\qquad \hat{\mathbf{g}}_{\text{global}} = \frac{1}{N_d K_{\text{accum}}} \sum_{n=1}^{N_d} \sum_{k=1}^{K_{\text{accum}}} \Big(\frac{1}{b_{\text{micro}}}\sum_{i \in \mathcal{B}_{n,k}} \nabla \ell_i\Big) = \frac{1}{B_{\text{global}}}\sum_{j=1}^{B_{\text{global}}} \nabla \ell_j$$</div>
+          <p class="small muted" style="margin-bottom:0">ZeRO-1 先切最肥的那块（占 75% 的优化器账本），通信量不变；ZeRO-2 再切斜率，通信量也不变；ZeRO-3 连参数都切，每张卡只剩 $16\Psi/N_d$，代价是前向、反向时要临时把参数凑齐，通信量约多 50%。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认是书中的 70B、64 张卡：DDP 每张卡 1120 GB，ZeRO-1 降到 293.1 GB，ZeRO-2 降到 155.3 GB，ZeRO-3 只要 17.5 GB，一张 80 GB 的卡绰绰有余。</li>
+            <li>把卡数拖到 1：四种方案都一样是 1120 GB，切分要靠人多。</li>
+            <li>把优化器换成 Muon / Lion：账本从 12 字节降到 8 字节，全套从 $16\Psi$ 降到 $12\Psi$。</li>
+            <li>看书架：DDP 每人 16 本、ZeRO-1 每人 7 本、ZeRO-2 每人 5.5 本、ZeRO-3 每人 4 本，只有后两种放得进 6 本的书架。</li>
+            <li>梯度累积：书中 64 张卡、每卡每次 4 道题、目标 4096 道题，需要累积 $K=16$ 趟。勾选“忘了除以 $K$”，平均斜率就被放大 $K$ 倍：对 SGD 相当于偷偷把学习率乘了 $K$；对 Adam 这个倍数基本会被分母约掉。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="ring" data-title="Ring 围圈传纸条">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">每人只能递给右手邻居</span></div>
+        <div id="r-n"></div>
+        <div id="r-step"></div>
+        <div class="btn-row"><button class="btn ghost" id="r-prev">◀ 上一轮</button><button class="btn teal" id="r-next">下一轮 ▶</button></div>
+        <div class="btn-row"><button class="btn ghost" id="r-play">▶ 自动播放</button><button class="btn ghost" id="r-reset">从头开始</button></div>
+        <div class="caption">每张卡把自己的斜率切成 $N$ 段。前 $N-1$ 轮（Reduce-Scatter）：把手里的一段递给右边，右边加到自己的同一段上；后 $N-1$ 轮（All-Gather）：把已经加齐的那段递给右边，右边直接抄下。与书中零算力实战的代码逐轮一致。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">◎</span><span class="ct"><span id="r-phase">第 0 轮：各自算好自己的斜率</span></span></div>
+          <div class="viz h420" id="r-ring"></div>
+          <div class="legend"><span><i style="background:var(--c2)"></i>这一轮正在传的纸条</span><span><i style="background:var(--c3)"></i>已经加齐 $N$ 个人的那一段</span></div>
+        </div>
+        <div class="stats" id="r-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">GB</span><span class="ct">单卡要收发多少？班长汇总 vs 围圈传</span><span class="sub">$\Psi=10$ 亿参数、BF16 斜率 2 GB；对数纵轴</span></div>
+          <div class="viz h260" id="r-comm"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>班长卡：收 $N-1$ 份再发 $N-1$ 份</span><span><i style="background:var(--c3)"></i>Ring：$2\frac{N-1}{N}\times2\,\text{GB}$</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$V_{\text{Ring}} = \underbrace{(N-1)\frac{\Psi}{N}}_{\text{Reduce-Scatter}} + \underbrace{(N-1)\frac{\Psi}{N}}_{\text{All-Gather}} = 2\,\frac{N-1}{N}\,\Psi \;\xrightarrow{N \to \infty}\; 2\Psi$$</div>
+          <p class="small muted" style="margin-bottom:0">分子的 $N-1$ 和分母的 $N$ 约掉了：不管 4 张卡还是一万张卡，每张卡发出的数据量都不超过两份斜率。只做前半场就是 ZeRO-2 需要的 Reduce-Scatter：每人只拿到自己负责的那一段总和。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认是书中的 4 张卡：$[1,2,3,4]$、$[10,20,30,40]$、$[100,\dots]$、$[1000,\dots]$。连按 3 次“下一轮”，每张卡都有一段加齐了；再按 3 次，所有卡都拿到 $[1111,2222,3333,4444]$。</li>
+            <li>每一轮每张卡只发出 $1/N$ 份斜率，6 轮一共 $6/4=1.5$ 份，等于 $2\cdot\frac{3}{4}$。</li>
+            <li>看通信量曲线：$N=100$ 时班长卡要收发 396 GB，Ring 每张卡收发合计只要 7.92 GB（发 3.96 GB、收 3.96 GB），快 50 倍。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="diloco" data-title="DiLoCo 自习对答案">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">各自自习 $H$ 步再碰头</span></div>
+        <div id="d-H"></div>
+        <div id="d-K"></div>
+        <div id="d-beta"></div>
+        <div id="d-eta"></div>
+        <div id="d-lr"></div>
+        <div class="btn-row"><button class="btn ghost" id="d-seed">换一组数据</button></div>
+        <div class="caption">玩具问题：20 维二次损失，曲率从 1 到 0.01；$K$ 个机房各有一份略有差异的数据（各自的最优点围着全局最优点散开），斜率带噪声。内层用 Adam，总共 3000 个内层步。三种方案：每步都通信（斜率取平均后走一步 Adam）；各自自习 $H$ 步后简单取平均（$\beta=0,\eta_{\text{outer}}=1$）；DiLoCo（外层 Nesterov 动量）。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">ℒ</span><span class="ct">按内层步数看</span></div>
+            <div class="viz h300" id="d-steps"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c6)">📡</span><span class="ct">按通信次数看</span></div>
+            <div class="viz h300" id="d-comms"></div>
+          </div>
+        </div>
+        <div class="legend"><span><i style="background:#9aa5b1"></i>每步都通信</span><span><i style="background:var(--c2)"></i>自习 $H$ 步 + 简单平均</span><span><i style="background:var(--c3)"></i>DiLoCo：自习 $H$ 步 + 外层 Nesterov 动量</span></div>
+        <div class="stats" id="d-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">✍</span><span class="ct">书中手算：两个机房自习一周后合并</span></div>
+          <div class="row2">
+            <div>
+              <div id="h-w1"></div>
+              <div id="h-w2"></div>
+              <div id="h-beta"></div>
+              <div id="h-eta"></div>
+            </div>
+            <div class="viz h260" id="h-line"></div>
+          </div>
+          <div id="h-calc" class="formula" style="border-left-color:var(--c5)"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{aligned} &\mathbf{w}_k^{(t, 0)} = \mathbf{w}^{(t-1)},\quad \mathbf{w}_k^{(t, h)} = \operatorname{AdamW}\big(\mathbf{w}_k^{(t, h-1)}, \mathbf{g}_{k,h}\big)\quad (h=1,\dots,H) \\ &\boldsymbol{\Delta}^{(t)} = \frac{1}{K}\sum_{k=1}^K \big(\mathbf{w}^{(t-1)} - \mathbf{w}_k^{(t, H)}\big),\quad \mathbf{m}^{(t)} = \beta\, \mathbf{m}^{(t-1)} + \boldsymbol{\Delta}^{(t)},\quad \mathbf{w}^{(t)} = \mathbf{w}^{(t-1)} - \eta_{\text{outer}}\big(\beta\,\mathbf{m}^{(t)} + \boldsymbol{\Delta}^{(t)}\big) \end{aligned}$$</div>
+          <p class="small muted" style="margin-bottom:0">每 $H$ 步只通信一次，把一整周走出的总位移 $\boldsymbol\Delta$ 当成“伪斜率”交给外层优化器。外层 Nesterov 动量看准了几周连起来的下山大势，敢迈更大的步子。取 $\beta=0,\ \eta_{\text{outer}}=1$ 时就退化成简单的位置平均。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认 $H=100$：DiLoCo 只通信 30 次（省下 99%），损失在大部分时间里反而比每步都通信的方案更低；简单平均比每步都通信稍慢一些，但通信也少了 100 倍。在这个玩具问题里，外层动量相当于把每周的大方向放大了好几倍。</li>
+            <li>把 $\beta$ 调到 0、$\eta_{\text{outer}}$ 调到 1：DiLoCo 曲线和“简单平均”重合。</li>
+            <li>把 $H$ 拉到 500：3000 步里只碰头 6 次，外层动量来不及发力，效果变差；$H$ 也不是越大越好。</li>
+            <li>手算卡片默认是书中数字：$w^{(0)}=10$，两个机房走到 7 和 5，$\beta=0.5,\ \eta=1$：$\Delta=4$，$m=4$，新起点 $10-(0.5\times4+4)=4.0$，比简单平均的 6.0 更靠近谷底。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

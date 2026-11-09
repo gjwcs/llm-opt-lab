@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 14 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch14.js"></script>
+</head>
+<body data-chapter="14">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="zloss" data-title="打分漂移与 Z-Loss">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">两个打分一起往上涨</span></div>
+        <div id="z-c"></div>
+        <div class="btn-row"><button class="btn ghost" id="z-day1">第 1 天 $(10,12)$</button><button class="btn ghost" id="z-day60">第 60 天 $(1000,1002)$</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div class="small" style="font-weight:650;color:var(--navy)">模拟三千步训练里的打分漂移</div>
+        <div id="z-drift"></div>
+        <div id="z-alpha"></div>
+        <div class="btn-row"><button class="btn ghost" id="z-seed">换一组随机抖动</button></div>
+        <div class="caption">玩具模型：4 个候选词的打分 $\mathbf z$ 用梯度下降（$\eta=1$）拟合固定的目标概率 $(0.6,0.25,0.1,0.05)$；每一步其他层的更新还会给所有打分加上同一个随机量（均值为“漂移速度”，标准差 0.05），交叉熵对这种“集体涨分”不管不问。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">e<sup>z</sup></span><span class="ct">电脑真的去算 Softmax 会怎样？</span></div>
+          <div style="position:relative;overflow-x:auto"><table class="data" id="z-table" style="min-width:600px"></table></div>
+          <p class="small muted" style="margin-bottom:0">各格式能存下的最大数：FP16 为 $65504\approx e^{11.09}$，BF16 约 $3.39\times10^{38}\approx e^{88.7}$，FP32 约 $3.40\times10^{38}\approx e^{88.72}$，FP64 约 $1.8\times10^{308}\approx e^{709.8}$。“直接算”指先算 $e^{z_i}$ 再相除；“先减最大值”指 $p_i=e^{z_i-z_{\max}}/\sum_j e^{z_j-z_{\max}}$，数学上完全相等。</p>
+        </div>
+        <div class="stats" id="z-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">ln Z</span><span class="ct">Z-Loss 把对数总分拴在 0 附近</span></div>
+          <div class="viz h300" id="z-sim"></div>
+          <div class="legend"><span><i style="background:#9aa5b1"></i>不加 Z-Loss</span><span><i style="background:var(--c3)"></i>加 Z-Loss $\alpha(\ln Z)^2$</span><span><i style="background:var(--c4);height:2px"></i>FP16 下 $e^{z}$ 溢出线 $11.09$</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c2)">✂</span><span class="ct">第一道护身符：梯度裁剪</span><span class="sub">偶尔踩到悬崖，斜率暴涨 100 倍</span></div>
+          <div class="row2">
+            <div>
+              <div id="z-clip"></div>
+              <div class="btn-row" style="margin-bottom:8px"><button class="btn ghost" id="z-cliff">换一批悬崖</button></div>
+              <div class="stats" id="z-stats2"></div>
+            </div>
+            <div class="viz h260" id="z-spike"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\mathcal{L}_{\text{total}} = \underbrace{-z_y + \ln Z}_{\text{交叉熵}} + \underbrace{\alpha (\ln Z)^2}_{\text{Z-Loss}},\qquad \ln Z = \ln\sum_{j} e^{z_j} \\ \frac{\partial \mathcal{L}_{\text{total}}}{\partial z_i} = \big(p_i - \mathbb{I}(i=y)\big) + 2\alpha (\ln Z)\, p_i,\qquad \sum_i\frac{\partial \mathcal{L}_{\text{total}}}{\partial z_i}=2\alpha\ln Z\end{gathered}$$</div>
+          <div class="formula">$$\tilde{\mathbf{g}}_t = \min\!\Big(1, \frac{c}{\|\mathbf{g}_t\|_2}\Big) \mathbf{g}_t$$</div>
+          <p class="small muted" style="margin-bottom:0">交叉熵对所有打分的导数加起来恰好是 0，所以它看不见“所有打分一起涨”；Z-Loss 的导数总和是 $2\alpha\ln Z$，$\ln Z$ 一离开 0 就被往回拉。书中算例：$z=(1000,1002)$ 时 $\ln Z=1000+\ln(1+e^2)\approx1002.13$，拉回到 $(-2.13,\,-0.13)$ 后 $\ln Z=0$，两者之差仍是 2，预测概率一点没变。梯度裁剪只缩短步子、不改方向。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“第 1 天”：$e^{10}\approx22026$、$e^{12}\approx162755$，FP16 已经装不下（$e^{12}>65504$），FP32 算得好好的，$p=(0.119,\,0.881)$。</li>
+            <li>点“第 60 天”：$e^{1000}$ 在 FP32 和 FP64 里都变成 Inf，$\text{Inf}/\text{Inf}=\text{NaN}$；“先减最大值”的写法依然给出 $(0.119,\,0.881)$。</li>
+            <li>看 Z-Loss 模拟：不加 Z-Loss 时 $\ln Z$ 随漂移一路往上，两千多步后冲破 FP16 的 11.09；加上 Z-Loss 后它停在 $Vd/(2\eta\alpha)$ 附近（$V=4$ 个词，$d$ 是漂移速度）。两种情况下 4 个词的预测概率几乎一样，因为 Z-Loss 拉的主要是“集体涨分”这一个方向。</li>
+            <li>看梯度裁剪：关掉裁剪时，每次踩到悬崖参数都被踹飞，损失出现尖峰；打开 $c=1$ 后，尖峰被削平。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="qknorm" data-title="QK-Norm 驯服注意力">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">权重悄悄膨胀</span></div>
+        <div id="q-s"></div>
+        <div id="q-dk"></div>
+        <div id="q-gamma"></div>
+        <div class="btn-row"><button class="btn ghost" id="q-book">书中例子：$d_k=4$，全是 20</button><button class="btn ghost" id="q-seed">重新采样</button></div>
+        <div class="caption">8 个词，查询与键向量 $\mathbf q_i=s\,\tilde{\mathbf q}_i$、$\mathbf k_j=s\,\tilde{\mathbf k}_j$，$\tilde{\mathbf q},\tilde{\mathbf k}$ 的每个坐标都是标准正态。$s$ 模拟训练后期 $\mathbf W_Q,\mathbf W_K$ 的刻度一起涨了 $s$ 倍。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">▦</span><span class="ct">注意力权重（每行是一个词在看谁）</span></div>
+          <div class="viz h300" id="q-heat"></div>
+        </div>
+        <div class="stats" id="q-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">s²</span><span class="ct">最大注意力打分随权重刻度的变化</span><span class="sub">双对数坐标</span></div>
+          <div class="viz h260" id="q-curve"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>不加 QK-Norm：$\propto s^2$</span><span><i style="background:var(--c3)"></i>QK-Norm：不超过 $\bar\gamma^2\sqrt{d_k}$</span><span><i style="background:var(--c2);height:2px"></i>FP16 下 $e^{s}$ 溢出线 11.09</span><span><i style="background:var(--plum);height:2px"></i>FP32 溢出线 88.7</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\hat{\mathbf{q}}_i = \gamma_Q \odot \frac{\mathbf{q}_i}{\sqrt{\frac{1}{d_k}\|\mathbf{q}_i\|_2^2 + \epsilon}},\qquad \hat{\mathbf{k}}_j = \gamma_K \odot \frac{\mathbf{k}_j}{\sqrt{\frac{1}{d_k}\|\mathbf{k}_j\|_2^2 + \epsilon}},\qquad s_{ij}^{\text{QK-Norm}} = \frac{\hat{\mathbf{q}}_i^\top \hat{\mathbf{k}}_j}{\sqrt{d_k}} \approx \bar{\gamma}^2 \sqrt{d_k}\, \cos\angle(\mathbf{q}_i, \mathbf{k}_j)$$</div>
+          <p class="small muted" style="margin-bottom:0">不加 QK-Norm 时 $s_{ij}=\mathbf q_i^\top\mathbf k_j/\sqrt{d_k}$，$\mathbf W_Q$、$\mathbf W_K$ 各涨 $s$ 倍，打分就涨 $s^2$ 倍：Softmax 先是变成“只看一个词”的独热分布（梯度几乎为 0），再往后就是 $e^{s_{ij}}$ 溢出。QK-Norm 在相乘前把两个向量各自缩回均方根为 1，打分只剩夹角余弦，被锁在 $[-\bar\gamma^2\sqrt{d_k},\,\bar\gamma^2\sqrt{d_k}]$ 里。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“书中例子”：$\mathbf q=\mathbf k=(20,20,20,20)$，不加 QK-Norm 时 $s_{ij}=1600/2=800$，$e^{800}$ 直接爆表；加上 QK-Norm 后两个向量都变成 $(1,1,1,1)$，打分只有 $4/2=2.0$，$e^{2}\approx7.389$。</li>
+            <li>把刻度 $s$ 从 1 慢慢拖大：左边热力图的每一行越来越像“只亮一格”，平均熵跌向 0；右边 QK-Norm 的热力图完全不变。</li>
+            <li>看曲线：未归一化的最大打分沿 $s^2$ 直线上涨，先后穿过 FP16 与 FP32 的溢出线；QK-Norm 是一条水平线。</li>
+            <li>把 $\gamma$ 调大：QK-Norm 的天花板 $\bar\gamma^2\sqrt{d_k}$ 跟着抬高，这就是“可学习的温和缩放旋钮”。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="sround" data-title="随机舍入抽签">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">粗刻度尺上走小步</span></div>
+        <div class="control"><div class="control-head"><span>数字格式</span></div><div id="r-fmt"></div></div>
+        <div id="r-delta"></div>
+        <div id="r-T"></div>
+        <div id="r-trials"></div>
+        <div class="btn-row"><button class="btn ghost" id="r-seed">重新抽签</button></div>
+        <div class="caption" id="r-cap"></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">w</span><span class="ct">旋钮的轨迹</span></div>
+          <div class="viz h300" id="r-traj"></div>
+          <div class="legend"><span><i style="background:var(--ink)"></i>理想（无限精度）</span><span><i style="background:var(--c4)"></i>四舍五入</span><span><i style="background:var(--c3)"></i>随机舍入：平均</span><span><i style="background:#b9dcc6"></i>随机舍入：单次抽签</span></div>
+        </div>
+        <div class="stats" id="r-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">√T</span><span class="ct">走得越久，误差怎么长？</span><span class="sub">双对数坐标</span></div>
+          <div class="viz h260" id="r-err"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>四舍五入：每步都赖掉 $\delta$，误差 $\propto T$</span><span><i style="background:var(--c3)"></i>随机舍入：误差均方根 $\approx\Delta\sqrt{T\,p(1-p)}\propto\sqrt T$</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\operatorname{SR}_\Delta(x) = \begin{cases} \lfloor x \rfloor_\Delta + \Delta, & \text{概率 } p = \dfrac{x - \lfloor x \rfloor_\Delta}{\Delta} \\[6pt] \lfloor x \rfloor_\Delta, & \text{概率 } 1 - p \end{cases}\qquad \mathbb{E}\big[\operatorname{SR}_\Delta(x)\big] = x,\qquad \operatorname{Var}\big(\operatorname{SR}_\Delta(x)\big) = \Delta^2 p(1-p) \le \frac{\Delta^2}{4}$$</div>
+          <p class="small muted" style="margin-bottom:0">四舍五入每一步都往同一个方向赖账，$T$ 步就少走 $T\delta$；随机舍入每一步的误差平均为 0、互不相关，加起来只按 $\sqrt T$ 增长。真实的浮点数刻度不是等距的：BF16 只有 7 位尾数，在 1.0 附近相邻两个数差 $2^{-7}\approx0.0078$；FP8 只有 2～3 位尾数：E4M3 有 3 位，差 $2^{-3}=0.125$（E5M2 只有 2 位，差 0.25）。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认是书中的例子：刻度 0.1，从 1.0 出发每步 $+0.01$ 走 100 步。四舍五入死死卡在 1.0；随机舍入每次有 10% 的机会进一格，平均正好走到 2.0；单次抽签会在 2.0 上下晃（标准差约 0.3，书中脚本打印的那一次停在 1.9）。</li>
+            <li>把步数拉到 10000：四舍五入的误差变成 100；随机舍入的误差只有约 3（$0.1\times\sqrt{10000\times0.1\times0.9}$）。</li>
+            <li>切到 BF16，每步 $+0.001$：0.001 不到 1.0 附近刻度 0.0078 的一半，四舍五入同样一步都走不动。这就是为什么混合精度训练要保留一份 FP32 主权重，或者改用随机舍入。</li>
+            <li>把每步改动调到大于半格（例如刻度 0.1 时调到 0.06）：四舍五入会走，但每步都多走 0.04，照样越走越偏。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

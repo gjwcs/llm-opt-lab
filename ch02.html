@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 2 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch02.js"></script>
+</head>
+<body data-chapter="2">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="race" data-title="三颗小球赛峡谷">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div id="a-preset" style="margin:2px 0 4px"></div>
+        <div id="a-kappa"></div>
+        <div id="a-eta"></div>
+        <div id="a-beta"></div>
+        <div id="a-T"></div>
+        <div id="a-on"></div>
+        <div class="btn-row"><button class="btn teal" id="a-play">▶ 播放</button><button class="btn ghost" id="a-reset">回到 (10, 1)</button></div>
+        <div class="caption">峡谷 $f(x,y)=\tfrac12x^2+\tfrac{\kappa}{2}y^2$，东西方向弯曲度 $1$，南北方向弯曲度 $\kappa$。书中 $\kappa=50$ 就是 $0.5x^2+25y^2$。在地图上点一下或拖动，可以换起点。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">⛰</span>窄峡谷地图与三条轨迹<span class="sub" id="a-step"></span></div>
+          <div class="viz h340" id="a-map"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>普通 GD</span><span><i style="background:var(--c2)"></i>重球动量 HB</span><span><i style="background:var(--c3)"></i>Nesterov 超前探路 NAG（空心点 = 探路点）</span></div>
+        </div>
+        <div class="stats" id="a-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">f</span>海拔 $f(\boldsymbol\theta_t)$（对数坐标）</div>
+            <div class="viz h260" id="a-loss"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c5)">!</span>稳不稳？看 $\eta\lambda_{\max}$ 有没有越线</div>
+            <div class="viz h260" id="a-stab"></div>
+            <div class="caption">三种方法在最陡方向上的生死线：GD 是 $2$，重球是 $2(1+\beta)$，Nesterov 是 $\tfrac{2(1+\beta)}{1+2\beta}$。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>前 3 步手算账本<span class="sub">随左侧参数实时重算</span></div>
+          <div style="overflow-x:auto"><table class="data" id="a-table"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\text{GD：}\ \boldsymbol\theta_{t+1}=\boldsymbol\theta_t-\eta\nabla\mathcal L(\boldsymbol\theta_t)\qquad \text{HB：}\ \mathbf v_{t+1}=\beta\mathbf v_t-\eta\nabla\mathcal L(\boldsymbol\theta_t),\ \ \boldsymbol\theta_{t+1}=\boldsymbol\theta_t+\mathbf v_{t+1}$$</div>
+          <div class="formula">$$\text{NAG：}\ \tilde{\boldsymbol\theta}_t=\boldsymbol\theta_t+\beta\mathbf v_t,\qquad \mathbf v_{t+1}=\beta\mathbf v_t-\eta\nabla\mathcal L(\tilde{\boldsymbol\theta}_t)\approx\big(\beta\mathbf I-\eta\beta\nabla^2\mathcal L\big)\mathbf v_t-\eta\nabla\mathcal L(\boldsymbol\theta_t),\qquad \boldsymbol\theta_{t+1}=\boldsymbol\theta_t+\mathbf v_{t+1}$$</div>
+          <div class="explain">重球把上一步的速度留下一部分：南北方向一正一负互相抵消，东西方向同号一路累加。Nesterov 先顺着惯性滑到探路点再看坡度，多出来的 $-\eta\beta\nabla^2\mathcal L\,\mathbf v_t$ 像一脚刹车。但刹车也有前提：最陡方向必须满足 $\eta\lambda_{\max}\lt\tfrac{2(1+\beta)}{1+2\beta}$，否则探路点本身就已经跨到对面山壁上了。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“书中 §2.4 手算”（$\eta=0.035$，$\beta=0.5$）：第 1 步三者都落在 $(9.650,-0.750)$；第 2 步 GD 弹回 $y=+0.5625$，重球只到 $-0.3125$，Nesterov 却冲到 $y=+1.219$，反而冲过了头。</li>
+            <li>原因看右上角的稳不稳图：$\eta\lambda_{\max}=0.035\times50=1.75$，超过了 Nesterov 在 $\beta=0.5$ 时的上限 $\frac{2(1+\beta)}{1+2\beta}=1.5$（重球的上限是 $3$），所以它在南北方向越摆越大，几步之后飞出地图。把 $\eta$ 降到 $0.02$ 以下，刹车效果才会出现。</li>
+            <li>点“书中 30 行脚本”（$\eta=0.026$，$\beta=0.8$，15 步）：GD 停在约 $(6.736,\,0.000)$、海拔约 $22.69$；重球约 $(0.659,\,0.114)$、$0.54$；Nesterov 约 $(1.115,\,-0.032)$、$0.65$，与书中脚本的输出一致。</li>
+            <li>点“最优重球参数”（$\eta^*\approx0.0614$，$\beta^*\approx0.566$）：15 步后重球海拔约 $1.4$，是三者最低；但同一个步长让 GD 和 Nesterov 当场发散，最优参数只对重球最优。</li>
+            <li>把 $\kappa$ 拉到 100：GD 的东西方向几乎原地不动，这就是“窄峡谷来回撞墙”。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="rate" data-title="条件数决定速度">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div id="b-kappa"></div>
+        <div id="b-beta"></div>
+        <div id="b-eta"></div>
+        <div class="btn-row"><button class="btn ghost" id="b-opt">用重球最优 $(\eta^*,\beta^*)$</button></div>
+        <div class="caption">在弯曲度介于 $[\lambda_{\min},\lambda_{\max}]=[1,\kappa]$ 的二次山谷里，每一步误差至少乘以缩短率 $\rho$。$\rho$ 越小越快；要把误差缩小 $1000$ 倍，大约需要 $\ln1000/\ln(1/\rho)$ 步。</div>
+      </div>
+      <div class="stack">
+        <div class="stats" id="b-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">ρ</span>最优参数下的缩短率 vs 条件数</div>
+            <div class="viz h300" id="b-rho"></div>
+            <div class="legend"><span><i style="background:var(--c4)"></i>GD：$\frac{\kappa-1}{\kappa+1}$</span><span><i style="background:var(--c2)"></i>重球：$\frac{\sqrt\kappa-1}{\sqrt\kappa+1}$</span><span><i style="background:var(--c3)"></i>Nesterov（$\eta=\tfrac1L$，$\beta=\frac{\sqrt\kappa-1}{\sqrt\kappa+1}$）：$1-\frac{1}{\sqrt\kappa}$</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">N</span>误差缩小 1000 倍要走几步</div>
+            <div class="viz h300" id="b-steps"></div>
+            <div class="caption">双对数坐标：GD 的步数正比于 $\kappa$，重球和 Nesterov 只正比于 $\sqrt\kappa$（Nesterov 约是重球的 2 倍）。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">η</span>当前 $\kappa$ 下，缩短率随步长怎么变<span class="sub" id="b-sub"></span></div>
+          <div class="viz h300" id="b-eta-plot"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>GD</span><span><i style="background:var(--c2)"></i>重球（当前 $\beta$）</span><span><i style="background:var(--c3)"></i>Nesterov（当前 $\beta$）</span><span>竖线 = 当前 $\eta$；超过 $\rho=1$ 就发散</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">✓</span>实测验证：从 $(10,1)$ 出发，误差 $\|\boldsymbol\theta_t\|$ 的下降</div>
+          <div class="viz h260" id="b-verify"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>GD（最优 $\eta^*_{\text{GD}}$）</span><span><i style="background:var(--c2)"></i>重球（当前 $\eta,\beta$）</span><span><i style="background:var(--c3)"></i>Nesterov（当前 $\eta,\beta$）</span><span>虚线 = $\rho^t$ 理论斜率</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\kappa=\frac{\lambda_{\max}}{\lambda_{\min}},\qquad \eta^*_{\text{GD}}=\frac{2}{\lambda_{\max}+\lambda_{\min}},\qquad \rho_{\text{GD}}=\frac{\kappa-1}{\kappa+1}\approx1-\frac{2}{\kappa}$$</div>
+          <div class="formula">$$\eta^*_{\text{HB}}=\frac{4}{(\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}})^2},\qquad \beta^*=\Big(\frac{\sqrt\kappa-1}{\sqrt\kappa+1}\Big)^2,\qquad \rho^*_{\text{HB}}=\sqrt{\beta^*}=\frac{\sqrt\kappa-1}{\sqrt\kappa+1}\approx1-\frac{2}{\sqrt\kappa}$$</div>
+          <div class="formula">$$\text{Nesterov（常用参数}\ \eta=\tfrac{1}{\lambda_{\max}},\ \beta=\tfrac{\sqrt\kappa-1}{\sqrt\kappa+1}\text{）：}\quad \rho_{\text{NAG}}=1-\frac{1}{\sqrt\kappa}$$</div>
+          <div class="explain">“木桶短板”：GD 的一个步长要同时照顾最陡和最缓两个方向，两头的缩放比例 $1-\eta\lambda_{\min}$ 和 $\eta\lambda_{\max}-1$ 相等时最好，于是被 $\kappa$ 卡住。重球的特征根落在半径 $\sqrt\beta$ 的圆上，把 $\kappa$ 开了个根号。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>$\kappa=50$：GD 每步乘 $0.9608$，重球每步乘 $0.752$，正是书中的数字。</li>
+            <li>$\kappa=100$：把误差缩小 1000 倍，GD 要 $345.4$ 步、重球 $34.4$ 步、Nesterov（常用参数，$\rho=0.9$）$65.6$ 步，大致就是书中对比表里的“约 345、约 35、约 66 步”。</li>
+            <li>$\kappa=10^4$：差距变成 100 倍。根号的威力就在这里。</li>
+            <li>在下方步长图里把 $\beta$ 调到 0：重球曲线和 GD 重合；$\beta$ 越大，重球的“平底锅”越宽、越低。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="roots" data-title="韦达定理看穿惯性">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div id="c-method" style="margin:2px 0 6px"></div>
+        <div id="c-kappa"></div>
+        <div id="c-eta"></div>
+        <div id="c-beta"></div>
+        <div id="c-lam"></div>
+        <div class="btn-row"><button class="btn ghost" id="c-book">书中 §2.4 参数</button><button class="btn ghost" id="c-opt">最优重球参数</button></div>
+        <div class="caption">在弯曲度为 $\lambda$ 的方向上，误差每步乘以特征方程的根 $r$。重球的特征方程是 $r^2-(1+\beta-\eta\lambda)r+\beta=0$；Nesterov 是 $r^2-(1+\beta)(1-\eta\lambda)r+\beta(1-\eta\lambda)=0$。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">ℂ</span>特征根在复平面上的位置</div>
+            <div class="viz sq" id="c-plane" style="max-height:400px"></div>
+            <div class="caption">从蓝到红：$\lambda$ 从 $\lambda_{\min}=1$ 扫到 $\lambda_{\max}=\kappa$。实线圆：单位圆（出圈就发散）；虚线圆：半径 $\sqrt\beta$。大圆点是左侧选中的 $\lambda$。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">t</span>选中方向上的误差怎么走</div>
+            <div class="viz sq" id="c-time" style="max-height:400px"></div>
+            <div class="caption">从误差 $1$ 出发、初速为 $0$，纵轴为这一方向上的坐标；灰色包络为 $\pm|r|^t$。</div>
+          </div>
+        </div>
+        <div class="stats" id="c-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$r^2-(1+\beta-\eta\lambda)\,r+\beta=0,\qquad \Delta=(1+\beta-\eta\lambda)^2-4\beta\le0\ \Longrightarrow\ r_1r_2=\beta,\ \ |r_1|=|r_2|=\sqrt\beta$$</div>
+          <div class="explain">韦达定理说两根之积等于常数项 $\beta$。判别式小于等于零时两根是一对共轭复数，模长相同，所以 $|r|=\sqrt\beta$，与 $\lambda$ 无关：高矮胖瘦所有方向齐步走。只要让 $\lambda_{\min}$ 和 $\lambda_{\max}$ 两头恰好卡在 $\Delta=0$ 上，就解出 $\sqrt{\beta^*}=\frac{\sqrt\kappa-1}{\sqrt\kappa+1}$。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“最优重球参数”：所有方向的根都落在虚线圆 $|r|=\sqrt{\beta^*}=0.752$ 上，蓝点和红点恰好在实轴上相遇（$\Delta=0$）。</li>
+            <li>把 $\beta$ 调小：两端的根先后掉到实轴上（过阻尼），离单位圆更近的那个决定速度。</li>
+            <li>切到 Nesterov，再点“书中 §2.4 参数”：最陡方向的一个根在 $-1.39$，跑出了单位圆，这就是实验 1 里 Nesterov 冲过头、越摆越大的原因。</li>
+            <li>把 $\beta$ 拉到 $0.9$：虚线圆半径 $\sqrt{0.9}\approx0.9487\approx\frac{38-1}{38+1}$。按 $\sqrt\beta=\frac{\sqrt\kappa-1}{\sqrt\kappa+1}$ 反推，这是 $\sqrt\kappa\approx38$、$\kappa\approx1440$ 的峡谷的最优惯性（书中问 1）。</li>
+            <li>切到 GD：每个方向只有一个实根 $1-\eta\lambda$，排成实轴上的一条线段。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

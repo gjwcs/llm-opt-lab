@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 4 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch04.js"></script>
+</head>
+<body data-chapter="4">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="batch" data-title="抽题越多抖得越小">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div class="small muted">题库：每道题在当前位置算出的斜率</div>
+        <div id="b-data" style="margin:6px 0 4px"></div>
+        <div id="b-B"></div>
+        <div class="btn-row"><button class="btn ghost" id="b-redraw">重新抽 4000 次</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <div class="small muted"><b>步长—批量等价律</b>：在 $f(x)=\tfrac12x^2$ 上跑 SGD</div>
+        <div id="b-eta"></div>
+        <div id="b-k"></div>
+        <div class="caption">每道题的斜率 = 真实斜率 $x$ + 这道题自己的偏差（偏差的分布取自上方题库）。两组设置的摇晃温度 $\tau=\eta/B$ 相同。</div>
+      </div>
+      <div class="stack">
+        <div class="stats" id="b-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">ĝ</span>抽 $B$ 道题求平均斜率：4000 次的分布</div>
+            <div class="viz h260" id="b-hist"></div>
+            <div class="caption">柱子：实测；虚线：$\mathcal N(g,\ \sigma^2/B)$。$B$ 越大，柱子越瘦。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">σ²</span>抖动方差 vs 批量（双对数）</div>
+            <div class="viz h260" id="b-var"></div>
+            <div class="caption">圆点：实测方差；直线：$\sigma^2/B$，斜率 $-1$。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">τ</span>$B$ 放大 $k$ 倍、$\eta$ 也放大 $k$ 倍：每处理一道题的进展一样吗？<span class="sub" id="b-sub"></span></div>
+          <div class="viz h300" id="b-run"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>$(\eta,\ B)$</span><span><i style="background:var(--c4)"></i>$(k\eta,\ kB)$</span><span><i style="background:var(--slate)"></i>虚线：谷底乱蹦罚分的理论值 $\frac{\eta\sigma^2}{2B(2-\eta)}$</span><span>400 条轨迹取平均</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\mathbb E[\hat{\mathbf g}_t]=\mathbf g_t,\qquad \mathbb E\big[\|\hat{\mathbf g}_t-\mathbf g_t\|_2^2\big]=\frac{\sigma^2}{B},\qquad \mathbb E\big[\mathcal L(\boldsymbol\theta_{t+1})\big]\le\mathcal L(\boldsymbol\theta_t)-\eta\Big(1-\frac{L\eta}{2}\Big)\|\mathbf g_t\|_2^2+\underbrace{\frac{L\eta^2\sigma^2}{2B}}_{\text{单步抽题抖动罚分}}$$</div>
+          <div class="formula">$$\boldsymbol\theta_{t+1}=\boldsymbol\theta_t-\eta\mathbf g_t-\eta\bar{\mathbf e}_t,\qquad \tau\triangleq\frac{\eta}{B}\qquad(B\to kB\ \text{时令}\ \eta\to k\eta,\ \tau\ \text{不变})$$</div>
+          <div class="explain">$B$ 道题的偏差互相抵消，方差除以 $B$。摇晃的剧烈程度由 $\tau=\eta/B$ 决定：批量扩大 $k$ 倍、步长也扩大 $k$ 倍，每处理一道题带来的进展和摇晃都不变。但这条“线性缩放律”只在 $k\eta$ 仍远小于 $2/L$ 时成立。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>书中题库 $\{2,4,6,8\}$：均值 $g=5$，方差 $\sigma^2=5$。$B=1$ 时抖动方差约 $5$，$B=4$ 时约 $1.25$，$B=20$ 时约 $0.25$。</li>
+            <li>$\eta=0.05$、$k=4$：两条曲线以“处理的题数”为横轴几乎重合，乱蹦罚分也一样高。</li>
+            <li>把 $\eta$ 调到 $0.3$：$k\eta=1.2$ 已接近生死线 $2/L=2$，红线的罚分明显变高，线性缩放律失效。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="basin" data-title="噪声帮你挑宽盆地">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div id="w-land-sel" style="margin:2px 0 6px"></div>
+        <div id="w-eta"></div>
+        <div id="w-B"></div>
+        <div id="w-s"></div>
+        <div id="w-start" style="margin:6px 0 4px"></div>
+        <div class="btn-row"><button class="btn teal" id="w-run">▶ 开始</button><button class="btn ghost" id="w-sweep">扫描批量 B</button></div>
+        <div class="caption">左边 $x=-2$ 是窄深井（陡峭度 $\approx44$），右边 $x=+2$ 是宽盆地（陡峭度 $\approx0.6$），两个坑一样深。300 个小球同时跑 SGD，抽题噪声的大小随所在坑的陡峭度放大（书中推导用的假设 $\sigma^2\propto L_{\text{well}}$）。去掉噪声时，两个坑都能稳稳停住（$\eta\lt 2/44\approx0.045$）。切到“书中 30 行脚本”则换成书中的地形 $g=25(x+2)e^{-35(x+2)^2}+0.3(x-2)$、加性抖动 $\sigma/\sqrt B$，默认 $\eta=0.15$、$B=4$、$\sigma=1.2$、从 $x_0=-1.98$ 出发走 80 步。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">⛰</span>双坑地形与 300 个小球<span class="sub" id="w-step"></span></div>
+          <div class="viz h300" id="w-land"></div>
+          <div class="caption">曲线是损失 $f(x)$；底部柱状图是小球位置的分布。</div>
+        </div>
+        <div class="stats" id="w-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c3)">%</span>各坑里的小球占比</div>
+            <div class="viz h260" id="w-frac"></div>
+            <div class="legend"><span><i style="background:var(--c3)"></i>宽盆地 $x\gt0$</span><span><i style="background:var(--c4)"></i>窄深井 $|x+2|\lt0.5$</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">B</span>同样的 $\eta$，换不同批量</div>
+            <div class="viz h260" id="w-sweep-plot"></div>
+            <div class="caption">点“扫描批量 B”后计算：跑完全程后落在宽盆地的比例。横轴是摇晃温度 $\tau=\eta/B$。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">Δ</span>上了考场山谷偏移一点：宽盆地 vs 窄深井</div>
+          <div id="w-shift"></div>
+          <div id="w-shift-out" style="overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\mathbb E\big[\mathcal L(\boldsymbol\theta_\infty)-\mathcal L_{\text{井底}}\big]\propto\tau\sigma^2=\frac{\eta\sigma^2}{B},\qquad T_{\text{跳出坑}}\sim\exp\Big(\frac{c\cdot B\cdot w^2}{\eta\,\sigma^2}\Big)=\exp\Big(\frac{2c\,\Delta\mathcal L}{\tau\,\sigma^2 L_{\text{well}}}\Big)$$</div>
+          <div class="explain">在坑底，小球被抽题噪声踢来踢去，晃动的幅度由 $\tau=\eta/B$ 决定。井口宽度的平方 $w^2$ 和晃动幅度平方之比，决定了跳出去要等多少步：窄深井的 $w^2$ 太小，一两下就被踢出去；宽盆地的 $w^2$ 很大，进去就出不来了。批量太大（$\tau$ 太小），小球就会困在第一个碰到的窄井里，这就是“大批量泛化鸿沟”。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认 $\eta=0.03$、$B=1$：几百步后几乎所有小球都从窄深井跳到了宽盆地。</li>
+            <li>只把 $B$ 改成 4（摇晃温度降到四分之一），再点开始：小球全困在窄井里。</li>
+            <li>点“从宽盆地出发”：无论 $B$ 取多少，小球都安安稳稳待在宽盆地里。</li>
+            <li>点“扫描批量 B”：宽盆地占比随 $\tau$ 增大从 0 陡然升到接近 100%，这就是指数律 $\exp(\cdot/\tau)$ 的样子。</li>
+            <li>切到“书中 30 行脚本”：统计卡片显示无噪声 GD 走 80 步后还困在窄井里（约 $-1.90$），而 300 个小球在 $B=4$ 的抽题抖动下几乎全部跳进了宽盆地。这个窄井井底陡峭度约 $18.7$，$\eta L\approx2.8$ 已超过 2，无噪声 GD 只是在井里来回弹，所以就算把 $B$ 拉到 64，也有九成以上的小球逃出来。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="bcrit" data-title="临界批量算力账本">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div class="small muted"><b>单步账本</b>：$f(x)=\tfrac12x^2$，真实斜率 $g=x$</div>
+        <div id="c-x"></div>
+        <div id="c-sig"></div>
+        <div id="c-B"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <div class="small muted"><b>全程账本</b>：40 维山谷，弯曲度铺满 $[0.01,1]$</div>
+        <div id="c-noise"></div>
+        <div id="c-target"></div>
+        <div class="caption">每一步都按 $\eta^*(B)$ 取当前最优步长，数一数走到目标损失需要多少步 $S$、总共处理多少道题 $E=B\cdot S$。</div>
+      </div>
+      <div class="stack">
+        <div class="stats" id="c-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">↓</span>每一步能降多少</div>
+            <div class="viz h260" id="c-step"></div>
+            <div class="caption">实线：单步下降 $\frac{g^2}{2(1+B_{\text{crit}}/B)}$；虚线：每道题平均降多少（再除以 $B$）。竖线 = $B_{\text{crit}}$。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">η*</span>最优步长 $\eta^*(B)$</div>
+            <div class="viz h260" id="c-eta"></div>
+            <div class="caption">$B\ll B_{\text{crit}}$ 时 $\eta^*\propto B$（线性缩放）；$B\gg B_{\text{crit}}$ 时 $\eta^*$ 封顶在 $\eta_{\max}=1/L$。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">S·E</span>全程账本：步数 vs 题量（双对数）<span class="sub" id="c-sub"></span></div>
+          <div class="viz h340" id="c-tradeoff"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>实测：$B=1,2,4,\dots,16384$</span><span><i style="background:var(--c4)"></i>理论双曲线 $(S/S_{\min}-1)(E/E_{\min}-1)=1$</span><span>★ = $B_{\text{crit}}=E_{\min}/S_{\min}$ 附近</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$B_{\text{crit}}\triangleq\frac{\operatorname{tr}(\mathbf H\boldsymbol\Sigma)}{\mathbf g^\top\mathbf H\mathbf g}\approx\frac{\sigma^2}{\|\mathbf g\|_2^2},\qquad \eta^*(B)=\frac{\eta_{\max}}{1+B_{\text{crit}}/B},\qquad \frac{S(B)}{S_{\min}}=1+\frac{B_{\text{crit}}}{B},\qquad \frac{E(B)}{E_{\min}}=1+\frac{B}{B_{\text{crit}}}$$</div>
+          <div class="explain">$B$ 远小于 $B_{\text{crit}}$ 时，加显卡（加大 $B$）几乎线性地减少步数，不浪费题；$B$ 远大于 $B_{\text{crit}}$ 时，步数再也降不下去，多抽的题全是在烧电。离谷底越近，真实斜率 $\|\mathbf g\|$ 越小，$B_{\text{crit}}$ 越大，所以训练后期适合用更大的批量。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>书中算例 $x=5$、$\sigma^2=5$：$B_{\text{crit}}=0.2$，抽 1 道题就已经很准了。</li>
+            <li>把 $x$ 拖到 $0.5$：$B_{\text{crit}}$ 飙到 $20$。$B=1$ 时 $\eta^*=1/21\approx0.048$，单步只降约 $0.006$；$B=20$ 时 $\eta^*=0.5$，单步降 $0.0625$，一步顶原来 $10.5$ 步。</li>
+            <li>在全程账本里把噪声调大：整条曲线往右上方搬，$B_{\text{crit}}$ 跟着变大。曲线的“拐角”就是性价比最高的批量。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

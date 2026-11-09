@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 7 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch07.js"></script>
+</head>
+<body data-chapter="7">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="decay" data-title="权重衰减的世纪乌龙">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div id="w-eta"></div>
+        <div id="w-lam"></div>
+        <div id="w-s2"></div>
+        <div id="w-T"></div>
+        <div class="btn-row"><button class="btn ghost" id="w-reseed">重新抽样</button></div>
+        <div class="caption">两个旋钮都从 $10$ 出发。它们对损失其实没用，算出来的斜率只是纯噪声：常用字旋钮的噪声大小 $s_1=20$，生僻字旋钮 $s_2$ 可调。理想的权重衰减应当让两者按同一个比例 $(1-\eta\lambda)^t$ 缩回零。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中手算：$(w_1,w_2)=(10,10)$ 上的一步<span class="sub">$\eta=0.1$，$\lambda=1$，$\hat m=g$，$\sqrt{\hat v}=|g|$</span></div>
+          <div style="overflow-x:auto"><table class="data" id="w-book"></table></div>
+          <div class="caption">理想新位置：先缩回 $10\%$ 变成 $9$，再走一步斜率步 $0.1$，得到 $8.90$。</div>
+        </div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">w₁</span>常用字旋钮 $|w_1|$（噪声 $s_1=20$）</div>
+            <div class="viz h260" id="w-k1"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">w₂</span>生僻字旋钮 $|w_2|$（噪声 $s_2$）</div>
+            <div class="viz h260" id="w-k2"></div>
+          </div>
+        </div>
+        <div class="legend" style="margin-top:-6px"><span><i style="background:var(--c4)"></i>Adam-L2（旧版乌龙）</span><span><i style="background:var(--c3)"></i>AdamW（解耦）</span><span><i style="background:var(--c5)"></i>Lion（符号 + 解耦）</span><span><i style="background:var(--slate)"></i>虚线：理想 $10(1-\eta\lambda)^t$</span></div>
+        <div class="stats" id="w-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\textbf{Adam-L2：}\ g^{\text{L2}}_{t,i}=g_{t,i}+\lambda\theta_{t,i}\ \Longrightarrow\ \theta_{t+1,i}\approx\Big(1-\frac{\eta\lambda}{\sqrt{\hat v_{t,i}}}\Big)\theta_{t,i}-\eta\frac{\hat m_{t,i}}{\sqrt{\hat v_{t,i}}+\epsilon}$$</div>
+          <div class="formula">$$\textbf{AdamW：}\ \theta_{t+1,i}=\underbrace{(1-\eta\lambda)\,\theta_{t,i}}_{\text{除法外均匀缩回}}-\underbrace{\eta\frac{\hat m_{t,i}}{\sqrt{\hat v_{t,i}}+\epsilon}}_{\text{纯斜率自适应步}}\qquad \textbf{Lion：}\ \theta_{t+1}=(1-\eta\lambda)\theta_t-\eta\operatorname{sign}(\mathbf c_t)$$</div>
+          <div class="explain">把 $\lambda\theta$ 混进斜率，它就会跟着斜率一起被 $\sqrt{\hat v}$ 除：斜率大的旋钮缩回力被打了折扣，斜率小的旋钮被狠狠砍一刀。AdamW 把缩回这一步拿到除法外面单独做，所有旋钮按同一个比例缩回。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>看手算表：Adam-L2 把旋钮 1 只缩到 $9.85$，把旋钮 2 一脚踹到 $-40.10$；AdamW 和 Lion 都整整齐齐落在 $8.90$。</li>
+            <li>默认参数下看两张曲线图：绿线（AdamW）在两张图里一模一样，都贴着理想虚线；红线（Adam-L2）在常用字旋钮上几乎不缩，在生僻字旋钮上却一路砸向零，比理想虚线快得多。</li>
+            <li>把 $s_2$ 调到 $20$（两个旋钮一样）：红线在两张图里也一样了。乌龙只在斜率大小悬殊时才暴露。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="sphere" data-title="指针越短转得越快">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div class="small muted"><b>钟表指针</b></div>
+        <div id="s-R"></div>
+        <div id="s-ds"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <div class="small muted"><b>归一化网络里的权重向量</b>：每步沿切线迈 $\eta\mathbf u_\perp$（每个分量约 $\pm1$），再乘 $(1-\eta\lambda)$</div>
+        <div id="s-d"></div>
+        <div id="s-eta"></div>
+        <div id="s-lam"></div>
+        <div id="s-R0"></div>
+        <div id="s-T"></div>
+        <div class="btn-row"><button class="btn ghost" id="s-book">书中脚本参数</button></div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">◷</span>同样走 $\Delta s$，长短指针转多少</div>
+            <div class="viz sq" id="s-clock" style="max-height:360px"></div>
+          </div>
+          <div class="stats" id="s-stats" style="align-content:start"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">‖w‖</span>权重向量的长度 $\|\mathbf w_t\|$<span class="sub" id="s-sub"></span></div>
+          <div class="viz h300" id="s-norm"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>实测（$\lambda$ 为当前值）</span><span><i style="background:var(--c2)"></i>实测（$\lambda=0$，不加权重衰减）</span><span><i style="background:var(--c4)"></i>平衡半径 $\sqrt{\eta d/(2\lambda)}$</span><span><i style="background:var(--slate)"></i>竖线：第 2000 步</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">Δφ</span>有效角度步长 $\eta_{\text{eff}}=\eta/\|\mathbf w_t\|$</div>
+          <div class="viz h260" id="s-eff"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>当前 $\lambda$</span><span><i style="background:var(--c2)"></i>$\lambda=0$</span><span><i style="background:var(--c4)"></i>稳态 $\sqrt{2\eta\lambda/d}$</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$f(c\mathbf w)=f(\mathbf w)\ \Longrightarrow\ \mathbf w_t^\top\mathbf g_t=0,\qquad \Delta\phi_t\approx\frac{\|\Delta\mathbf w_t\|}{\|\mathbf w_t\|}\propto\eta_{\text{eff}}(t)\triangleq\frac{\eta}{\|\mathbf w_t\|}$$</div>
+          <div class="formula">$$\|\mathbf w_{t+1}\|_2^2=(1-\eta\lambda)^2\|\mathbf w_t\|_2^2+\eta^2\|\mathbf u_t\|_2^2\approx(1-2\eta\lambda)\|\mathbf w_t\|_2^2+\eta^2d\ \Longrightarrow\ \|\mathbf w^*\|_2\approx\sqrt{\frac{\eta d}{2\lambda}},\qquad \eta^*_{\text{eff}}=\sqrt{\frac{2\eta\lambda}{d}}\propto\sqrt{\eta\lambda}$$</div>
+          <div class="explain">斜率垂直于半径，每走一步都是直角三角形的斜边，长度只增不减（勾股定理）。不加权重衰减，指针越撑越长，转得越来越慢；加上权重衰减，“缩回”和“撑长”在平衡半径上打平手。平衡的速度由 $2\eta\lambda$ 决定，大约要走 $\frac{1}{2\eta\lambda}$ 步的好几倍才能到。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>钟表：半径 $10$ 走 $1$ 转 $0.1$ 弧度，缩到 $5$ 再走 $1$ 就转 $0.2$ 弧度，翻了一倍。</li>
+            <li>点“书中脚本参数”（$d=64$，$\eta=0.01$，$\lambda=0.05$，从长度 $40$ 出发，走 20000 步）：最后实测长度约 $2.51$，理论平衡半径约 $2.53$；两者差一点点，是因为切向投影后 $\|\mathbf u\|^2\approx d-1=63$。中途第 2000 步时长度还在 $15$ 左右，平衡要走上万步才到。</li>
+            <li>把 $\lambda$ 拉大 4 倍：平衡半径减半，有效步长翻倍（$\propto\sqrt{\eta\lambda}$），而且到达平衡快得多。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="memory" data-title="账本瘦身省显存">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div class="small muted"><b>Adafactor 行列还原</b>：编辑 $2\times2$ 斜率矩阵 $\mathbf G$</div>
+        <div id="a-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0"></div>
+        <div class="btn-row"><button class="btn ghost" id="a-book">书中矩阵 $\begin{bmatrix}1&amp;2\\3&amp;6\end{bmatrix}$</button><button class="btn ghost" id="a-v1">书中平方表 $\begin{bmatrix}2&amp;6\\4&amp;12\end{bmatrix}$</button><button class="btn ghost" id="a-v2">书中一般表 $\begin{bmatrix}2&amp;6\\4&amp;10\end{bmatrix}$</button><button class="btn ghost" id="a-rand">随机矩阵</button></div>
+        <div class="caption">后两个按钮直接给出书中的平方表 $\mathbf G\odot\mathbf G$（输入框里显示的是开平方后的 $\mathbf G$）。</div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <div class="small muted"><b>显存账单</b>（只算优化器状态）</div>
+        <div id="a-N"></div>
+        <div id="a-dim"></div>
+        <div id="a-bytes" style="margin:6px 0 4px"></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>Adafactor：只存行和、列和，还原整张分母表</div>
+          <div id="a-out" style="overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">GB</span>优化器账本显存账单<span class="sub" id="a-sub"></span></div>
+          <div class="viz h300" id="a-bars"></div>
+        </div>
+        <div style="overflow-x:auto" class="card"><table class="data" id="a-table"></table></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\mathbf r_t=\beta_2\mathbf r_{t-1}+(1-\beta_2)(\mathbf G_t\odot\mathbf G_t)\mathbf 1_n,\quad \mathbf c_t=\beta_2\mathbf c_{t-1}+(1-\beta_2)\mathbf 1_m^\top(\mathbf G_t\odot\mathbf G_t),\quad \hat V_{t,ij}=\frac{r_{t,i}\,c_{t,j}}{\mathbf 1_m^\top\mathbf r_t}$$</div>
+          <div class="formula">$$\textbf{Lion：}\ \mathbf c_t=\beta_1\mathbf m_{t-1}+(1-\beta_1)\mathbf g_t,\quad \boldsymbol\theta_{t+1}=(1-\eta\lambda)\boldsymbol\theta_t-\eta\operatorname{sign}(\mathbf c_t),\quad \mathbf m_t=\beta_2\mathbf m_{t-1}+(1-\beta_2)\mathbf g_t$$</div>
+          <div class="explain">Adam 给每个参数存两个账本（$m$ 和 $v$），70B 模型用 FP32 就是 $70\times10^9\times2\times4$ 字节 $=560$ GB。Adafactor 只存每行、每列的平方和，$m\times n$ 的表只要 $m+n$ 个数；当斜率平方表是“行因子×列因子”（秩 1）时还原分毫不差。Lion 干脆扔掉分母，只留一个动量账本，省一半。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>书中矩阵 $\mathbf G=\begin{bmatrix}1&amp;2\\3&amp;6\end{bmatrix}$：行和 $5,45$，列和 $10,40$，总和 $50$，还原出 $1,4,9,36$，与真实平方表完全相同，四个格子都迈 $1.0$。</li>
+            <li>点“书中一般表”（平方表 $\begin{bmatrix}2&amp;6\\4&amp;10\end{bmatrix}$，不是秩 1）：行和 $(8,14)$、列和 $(6,16)$、总和 $22$，还原出 $\begin{bmatrix}2.18&amp;5.82\\3.82&amp;10.18\end{bmatrix}$，分母 $\sqrt{\hat V}$ 与真实值的最大相对误差约 $4.4\%$，不到百分之五。</li>
+            <li>自己把 $\mathbf G$ 右下角的 $6$ 改成 $1$：还原误差变大，显示在表下方。</li>
+            <li>显存账单选 70B、FP32：Adam/AdamW $560$ GB，Lion $280$ GB，Adafactor 的分母只要几十 MB。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

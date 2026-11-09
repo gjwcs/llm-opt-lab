@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 10 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch10.js"></script>
+</head>
+<body data-chapter="10">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="svd" data-title="圆变椭圆三步曲">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">造一张 $\mathbf G=\mathbf U\boldsymbol\Sigma\mathbf V^\top$</span></div>
+        <div id="s-s1"></div>
+        <div id="s-s2"></div>
+        <div id="s-tv"></div>
+        <div id="s-tu"></div>
+        <div class="btn-row"><button class="btn ghost" id="s-book">书中例子 $(100,\,0.01)$</button><button class="btn ghost" id="s-mild">温和例子 $(2,\,0.5)$</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div id="s-stage"></div>
+        <div class="btn-row"><button class="btn teal" id="s-play">▶ 播放三步曲</button></div>
+        <div class="caption">右图从正圆出发：先转 $\mathbf V^\top$，再按 $\sigma_1,\sigma_2$ 拉伸，最后转 $\mathbf U$。椭圆太大或太扁时会自动缩放画面，角上标出缩放比例。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">○</span><span class="ct">正圆 → 椭圆：$\mathbf G$ 只干了三件事</span></div>
+          <div class="viz h380" id="s-morph"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>$\mathbf e_1$ 的像</span><span><i style="background:var(--c1)"></i>$\mathbf e_2$ 的像</span><span><i style="background:#cfd6de"></i>原来的单位圆</span><span><i style="background:var(--c3);height:2px"></i>右奇异向量 $\mathbf v_1,\mathbf v_2$（第 0 步）</span></div>
+        </div>
+        <div class="stats" id="s-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">Δ</span><span class="ct">同一个 $\mathbf G$，三种优化器第一步的“形状”</span><span class="sub">每格单独缩放到同样大小</span></div>
+          <div class="viz h260" id="s-three"></div>
+          <div id="s-mats" class="small" style="position:relative;overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\mathbf M_t=\mu\mathbf M_{t-1}+\mathbf G_t=\mathbf U_t\boldsymbol\Sigma_t\mathbf V_t^\top \\ \Delta\mathbf{W}_{\text{Muon}} = \arg\min_{\|\Delta\mathbf{W}\|_{\text{op}} \le \eta} \langle \mathbf{M}_t, \Delta\mathbf{W} \rangle = -\eta\, \mathbf{U}_t \mathbf{V}_t^\top = -\eta \big(\mathbf{M}_t \mathbf{M}_t^\top\big)^{-1/2} \mathbf{M}_t\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">谱范数 $\|\Delta\mathbf W\|_{\text{op}}$ 是“最大拉伸倍数”。规定每个通道最多走 $\eta$，想让一阶下降量 $\sum_k\sigma_k d_k$ 最大，当然是每个通道都顶格走满：把中间的 $\boldsymbol\Sigma$ 换成 $\mathbf I$，只留下 $\mathbf U\mathbf V^\top$。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“书中例子”：$\mathbf U=\mathbf V$ 都转 $45^\circ$，$\boldsymbol\Sigma=\operatorname{diag}(100,0.01)$，乘出来 $\mathbf G=\left[\begin{smallmatrix}50.005&49.995\\49.995&50.005\end{smallmatrix}\right]$，四个格子都约等于 50。</li>
+            <li>播放三步曲：正圆被拉成一根细针。SGD 的 $-\eta\mathbf G$ 只在第 1 个通道上走，第 2 个通道是第 1 个的万分之一。</li>
+            <li>Adam 第一步逐格除以自己的大小，得到全是 1 的表 $\left[\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right]$：奇异值 $(2,0)$，第 2 通道照样在睡（书中把每格近似除以 50，得到 $(2,\,0.0002)$，结论相同）。Muon 的 $\mathbf U\mathbf V^\top=\mathbf I$ 是一个正圆，两个通道都走 1。</li>
+            <li>把 $\theta_{\mathbf V}$ 和 $\theta_{\mathbf U}$ 拖到 $0^\circ$（矩阵正着摆）：Adam 也能把两个通道拉平；只要一转角度，它就失灵，Muon 不受影响。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="ns" data-title="五次迭代拉平奇异值">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">连按计算器</span></div>
+        <div class="control"><div class="control-head"><span>起始奇异值</span></div><div id="n-preset"></div></div>
+        <div id="n-x0"></div>
+        <div id="n-k"></div>
+        <div class="btn-row"><button class="btn teal" id="n-next">再按一次 ▶</button><button class="btn ghost" id="n-reset">归零</button></div>
+        <div class="caption">进入迭代前先除以 Frobenius 范数 $\|\mathbf M\|_F=\sqrt{\sum_k\sigma_k^2}$，把所有奇异值缩进 $(0,1]$；“单个 $x_0$”直接从 $x_0$ 出发。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">p</span><span class="ct">多项式与“蛛网图”</span></div>
+            <div class="viz sq" id="n-poly" style="max-height:400px"></div>
+            <div class="legend"><span><i style="background:var(--c2)"></i>三次 $1.5x-0.5x^3$</span><span><i style="background:var(--c1)"></i>五次 $(3.4445,-4.7750,2.0315)$</span><span><i style="background:#9aa5b1;height:2px"></i>$y=x$</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">σ</span><span class="ct">每个奇异值随按键次数的变化</span></div>
+            <div class="viz sq" id="n-traj" style="max-height:400px"></div>
+            <div class="legend"><span>实线：五次　虚线：三次　颜色区分不同的奇异值</span><span><i style="background:var(--c3);opacity:.3;height:10px"></i>$[0.68,\,1.2]$ 带</span></div>
+          </div>
+        </div>
+        <div class="stats" id="n-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">#</span><span class="ct">逐步数值表</span></div>
+          <div style="position:relative;overflow-x:auto"><table class="data" id="n-table" style="min-width:520px"></table></div>
+          <p class="small muted" style="margin-bottom:0" id="n-verify"></p>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\mathbf{X}_0 = \frac{\mathbf{M}_t}{\|\mathbf{M}_t\|_{\text{F}} + \epsilon},\qquad \mathbf{X}_{k+1} = a\mathbf{X}_k + b\mathbf{X}_k\big(\mathbf{X}_k^\top \mathbf{X}_k\big) + c\mathbf{X}_k\big(\mathbf{X}_k^\top \mathbf{X}_k\big)^2 \\ (a, b, c) = (3.4445,\ -4.7750,\ 2.0315) \quad \Longrightarrow \quad \mathbf{X}_5 \approx \mathbf{U}_t \mathbf{V}_t^\top\end{gathered}$$</div>
+          <div class="formula">$$g(\mathbf{X}) = \sum_{j=0}^{k} c_{2j+1} \mathbf{X}\big(\mathbf{X}^\top \mathbf{X}\big)^j = \mathbf{U} \Big(\sum_{j=0}^{k} c_{2j+1} \boldsymbol{\Sigma}^{2j+1}\Big) \mathbf{V}^\top = \mathbf{U} \, g(\boldsymbol{\Sigma}) \, \mathbf{V}^\top$$</div>
+          <p class="small muted" style="margin-bottom:0">只要多项式只含奇次幂，外面的 $\mathbf U,\mathbf V^\top$ 就纹丝不动，矩阵迭代等于给每个奇异值单独按计算器。三次多项式在 0 附近的斜率只有 1.5；五次多项式的 $a=3.4445$ 让小奇异值每步放大 3.4 倍，代价是不再收敛到 1（$a+b+c=0.701\ne1$）：按 5 次之后，0.002 到 1 之间的数都落在大约 $[0.68,\,1.20]$ 里（Keller Jordan 的设计目标是 $[0.7,\,1.3]$），之后就在这一带来回晃。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>选“单个 $x_0$”，$x_0=0.5$：三次多项式连按 5 次是 $0.6875\to0.8688\to0.9753\to0.9991\to1.0000$，和书中手算一致。</li>
+            <li>选书中 $2\times2$ 的 $\mathbf M=\operatorname{diag}(3,4)$：除以 $\|\mathbf M\|_F=5$ 得 $(0.6,0.8)$，三次多项式 3 步后约为 $(0.995,1.000)$。</li>
+            <li>选书中 $4\times4$ 的 $(100,10,1,0.1)$（零算力实战）：归一化后最小的只有 $0.000995$。五次多项式 5 步后 4 个奇异值约为 $[0.709,\,0.702,\,0.697,\,0.468]$，和书中代码的输出一样：原本相差 1000 倍，现在挤到了 0.47 到 0.71 之间，相差不到 2 倍，但并没有都变成 1；最小的那个要按到第 6 步才进入 $[0.68,\,1.2]$。三次多项式 5 步后它还不到 0.008。</li>
+            <li>看表格最下面的验算：用真的 $4\times4$ 矩阵做 5 次矩阵乘法迭代，再做一次 SVD，得到的奇异值和逐个按计算器的结果一模一样。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="race" data-title="Muon 对 Adam 训练赛">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">$12\times12$ 矩阵回归</span></div>
+        <div id="r-kappa"></div>
+        <div id="r-steps"></div>
+        <div id="r-lr-sgd"></div>
+        <div id="r-lr-adam"></div>
+        <div id="r-lr-muon"></div>
+        <div id="r-kimi"></div>
+        <div id="r-decay"></div>
+        <div class="btn-row"><button class="btn ghost" id="r-seed">换一个目标矩阵</button></div>
+        <div class="caption">损失 $\mathcal L(\mathbf W)=\tfrac12\operatorname{tr}\big((\mathbf W-\mathbf W^*)\mathbf S(\mathbf W-\mathbf W^*)^\top\big)$，输入协方差 $\mathbf S$ 的 12 个特征值从 1 均匀（对数）排到 $1/\kappa$，特征方向随机旋转。SGD 带 0.9 动量；Adam 取 $\beta=(0.9,0.999)$；Muon 用 0.95 的 Nesterov 动量加 5 步五次迭代。默认学习率已在 $\kappa=10^4$ 下粗调到各自接近最好。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">ℒ</span><span class="ct">训练损失</span></div>
+            <div class="viz h300" id="r-loss"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c6)">‖‖</span><span class="ct">离答案还有多远 $\|\mathbf W-\mathbf W^*\|_F$</span></div>
+            <div class="viz h300" id="r-err"></div>
+          </div>
+        </div>
+        <div class="legend"><span><i style="background:var(--c1)"></i>SGD + 动量</span><span><i style="background:var(--c2)"></i>Adam</span><span><i style="background:var(--c3)"></i>Muon</span></div>
+        <div class="stats" id="r-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">⏰</span><span class="ct">12 个通道各自还差多少？</span><span class="sub">左边曲率大（嗓门大），右边曲率小（装睡）</span></div>
+          <div id="r-t"></div>
+          <div class="viz h260" id="r-chan"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\mathbf W_{t+1}=(1-\eta\lambda)\mathbf W_t-\eta\cdot\big(0.2\sqrt{\max(m,n)}\big)\cdot\operatorname{NS}_5(\mathbf M_t) \\ \operatorname{RMS}\big(\mathbf U\mathbf V^\top\big)=\sqrt{\frac{\min(m,n)}{mn}}=\frac{1}{\sqrt{\max(m,n)}}\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">$\mathbf U\mathbf V^\top$ 的每个奇异值都是 1，它的每个格子平均只有 $1/\sqrt{\max(m,n)}$ 大；月之暗面实测 AdamW 每个格子的更新量（均方根）通常在 0.2 到 0.4 之间，于是取了 0.2：乘上 $0.2\sqrt{\max(m,n)}$ 之后，Muon 每个格子的平均改动量对齐到 AdamW 的典型水平，可以直接沿用 AdamW 的学习率与权重衰减。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认 $\kappa=10^4$（和书中 $\sigma_1/\sigma_2=100/0.01$ 一样相差一万倍）：200 步后 Muon 的损失与 $\|\mathbf W-\mathbf W^*\|_F$ 都明显低于另外两个。</li>
+            <li>拖动通道图上方的时间滑块：SGD 和 Adam 先把左边的大嗓门通道收拾干净，右边的通道几乎不动；Muon 让 12 个通道齐头并进。</li>
+            <li>把 $\kappa$ 降到 100：峡谷不再那么扁，带动量的 SGD 和 Adam 反而把损失压得更低，Muon 停在 $10^{-6}$ 左右（它每步的谱范数固定为 $\eta$，收尾全靠学习率衰减）。Muon 的优势来自“病态”，不是魔法。</li>
+            <li>关掉学习率衰减：Muon 每步的谱范数恒为 $\eta$，最后会在答案附近来回晃，误差停在学习率量级；这就是实践中 Muon 也要配学习率调度的原因。</li>
+            <li>勾选 Kimi 对齐：Muon 的学习率改为 $0.2\sqrt{12}\approx0.69$ 倍 Adam 学习率，不用再单独调。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 16 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch16.js"></script>
+<style>
+  .drafts { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+  .draft { border: 1.5px solid var(--line); border-radius: 10px; padding: 6px 8px; background: #fff; cursor: pointer; user-select: none; font-size: 12.5px; text-align: center; transition: all .12s; }
+  .draft:hover { border-color: var(--teal); }
+  .draft .r { font-family: var(--font-num); font-weight: 700; font-size: 18px; }
+  .draft.ok { background: var(--c3l); border-color: #9fd3b4; } .draft.fmt { background: var(--c2l); border-color: #f0cf96; } .draft.bad { background: var(--c4l); border-color: #efb3bc; }
+  .draft .a { font-family: var(--font-num); font-size: 12px; color: var(--slate); }
+</style>
+</head>
+<body data-chapter="16">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="ppo" data-title="PPO 涨跌停夹子">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">新旧概率比 $\rho$ 与夹子</span></div>
+        <div id="p-eps"></div>
+        <div id="p-A"></div>
+        <div id="p-rho"></div>
+        <div class="btn-row"><button class="btn ghost" id="p-case1">情形一：$A=+10,\rho=1.5$</button><button class="btn ghost" id="p-case2">情形二：$A=-10,\rho=0.5$</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div class="small" style="font-weight:650;color:var(--navy)">同一批草稿反复训练 $K$ 轮</div>
+        <div id="p-K"></div>
+        <div id="p-lr"></div>
+        <div class="caption">6 个候选开头词，旧模型写出“首先”的概率是 $p_{\text{old}}=0.05$。这一批里恰好只有一份以“首先”开头的草稿，而且它蒙对了，相对得分是上面的 $A$。PPO 会拿同一批数据连续做 $K$ 次梯度上升。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">J</span><span class="ct">单个词的 PPO 目标 $\min\big(\rho A,\ \operatorname{clip}(\rho,1-\epsilon,1+\epsilon)A\big)$</span></div>
+          <div class="viz h300" id="p-obj"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>PPO 目标（取较小者）</span><span><i style="background:#9aa5b1;height:2px"></i>不带夹子的 $\rho A$</span><span><i style="background:rgba(209,73,91,.25);height:10px"></i>斜率为 0 的“熔断区”</span></div>
+        </div>
+        <div class="stats" id="p-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">📈</span><span class="ct">“首先”的概率被推到多高？</span></div>
+          <div class="row2">
+            <div class="viz h260" id="p-traj"></div>
+            <div class="viz h260" id="p-dist"></div>
+          </div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>不带夹子（直接最大化 $\rho A$）</span><span><i style="background:var(--c3)"></i>PPO 夹子</span><span><i style="background:#9aa5b1"></i>旧模型</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}J'(w) = \mathbb{E}_{y \sim p_w}\big[ R(y)\, \nabla_w \ln p_w(y) \big] \\ \mathcal{J}_{\text{PPO}}(\mathbf{w}) = \mathbb{E}_t\Big[ \min\big( \rho_t \hat{A}_t,\ \operatorname{clip}(\rho_t, 1-\epsilon, 1+\epsilon) \hat{A}_t \big) \Big],\qquad \rho_t = \frac{\pi_{\mathbf{w}}(y_t\mid\cdot)}{\pi_{\text{old}}(y_t\mid\cdot)}\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">好词（$A>0$）涨到 $1+\epsilon$ 倍、差词（$A<0$）跌到 $1-\epsilon$ 倍之后，取较小者的那一项变成常数，斜率为 0，这一轮就不再推它。把外面的 $\min$ 写成 $\max$，夹子就被架空了。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“情形一”：$\rho A=15$，夹住后 $1.2\times10=12$，取较小者 12，斜率为 0。</li>
+            <li>点“情形二”：$\rho A=-5$，夹住后 $0.8\times(-10)=-8$，取较小者 $-8$，同样斜率为 0：差词跌够 20% 就停手，不会被一棍子打死。</li>
+            <li>看下面的模拟：不带夹子时，反复训练 20 轮后“首先”的概率从 0.05 一路冲到接近 1，模型变成只会说“首先”的复读机；PPO 在概率到 $0.05\times1.2=0.06$ 附近就停下了。</li>
+            <li>把 $A$ 调成负数：不带夹子会把“首先”一路往下压（20 轮后约 0.015，训得越久越接近 0）；PPO 在 $0.05\times0.8=0.04$ 附近就停手。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="dpo" data-title="DPO 隐式奖励">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">一对好坏答案</span></div>
+        <div id="d-beta"></div>
+        <div id="d-lw"></div>
+        <div id="d-ll"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div class="small" style="font-weight:650;color:var(--navy)">用全部偏好对训练一个 6 选 1 的模型</div>
+        <div id="d-T"></div>
+        <div id="d-lr"></div>
+        <div class="caption">6 个候选答案，参考模型 $\pi_{\text{ref}}$ 与隐藏的真实奖励 $r$ 固定；任意两个答案 $i,j$ 都按 Bradley-Terry 概率 $\sigma(r_i-r_j)$ 标注谁更好。对所有偏好对的 DPO 损失做梯度下降，看 $\pi_{\mathbf w}$ 最后落在哪里。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">σ</span><span class="ct">DPO 损失与“做错程度”权重</span></div>
+          <div class="viz h260" id="d-loss"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>损失 $-\ln\sigma(u)$</span><span><i style="background:var(--c2)"></i>斜率力度 $\sigma(-u)=\sigma(\hat r_l-\hat r_w)$</span><span>横轴 $u=\hat r_w-\hat r_l$</span></div>
+        </div>
+        <div class="stats" id="d-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">π</span><span class="ct">训练后的模型 vs 理论最优 $\pi^*\propto\pi_{\text{ref}}\,e^{r/\beta}$</span></div>
+          <div class="row2">
+            <div class="viz h260" id="d-bars"></div>
+            <div class="viz h260" id="d-scatter"></div>
+          </div>
+          <div class="legend"><span><i style="background:#9aa5b1"></i>参考模型 $\pi_{\text{ref}}$</span><span><i style="background:var(--c3)"></i>DPO 训练后 $\pi_{\mathbf w}$</span><span><i style="background:var(--c4);height:2px"></i>理论最优 $\pi^*$</span><span>右图：隐式奖励 $\beta\ln\frac{\pi_{\mathbf w}}{\pi_{\text{ref}}}$ 与真实奖励 $r$</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\pi^*(y|x) = \frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\!\Big(\frac{r(x,y)}{\beta}\Big) \iff r(x,y) = \beta \ln\frac{\pi^*(y|x)}{\pi_{\text{ref}}(y|x)} + \beta \ln Z(x) \\ \mathcal{L}_{\text{DPO}} = -\mathbb{E}\Big[ \ln \sigma\big(\hat{r}_{\mathbf{w}}(y_w) - \hat{r}_{\mathbf{w}}(y_l)\big) \Big],\quad \hat{r}_{\mathbf{w}}(y) = \beta \ln\frac{\pi_{\mathbf{w}}(y)}{\pi_{\text{ref}}(y)} \\ \nabla\mathcal L_{\text{DPO}}=-\beta\,\mathbb E\Big[\sigma(\hat r_l-\hat r_w)\big(\nabla\ln\pi_{\mathbf w}(y_w)-\nabla\ln\pi_{\mathbf w}(y_l)\big)\Big]\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">好坏答案相减，只跟题目有关的 $\beta\ln Z(x)$ 被约掉，奖励模型从方程里消失了。所以 DPO 训练出来的模型自带一个“隐式奖励” $\beta\ln(\pi_{\mathbf w}/\pi_{\text{ref}})$，它和真实奖励只差一个常数。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>把两个对数比都拖到 0（新模型 = 参考模型）：$u=0$，损失 $\ln2\approx0.693$，斜率力度 0.5。好答案排得越靠前（$u$ 越大），力度越小，“已经排对了就不用再使劲”。</li>
+            <li>看训练结果：绿色柱子几乎和红色横线重合，DPO 不需要奖励模型，也学到了 $\pi_{\text{ref}}e^{r/\beta}$ 的最优解；右图的点排成一条斜率为 1 的直线。</li>
+            <li>把 $\beta$ 调大（弹簧更硬）：$\pi^*$ 更贴近参考模型；调小：概率更集中到奖励最高的答案上。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="grpo" data-title="GRPO 八份草稿">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">同一道题写 $G$ 份草稿</span></div>
+        <div id="g-G"></div>
+        <div class="btn-row"><button class="btn ghost" id="g-book">书中正文版</button><button class="btn ghost" id="g-cpu">零算力实战版</button></div>
+        <div id="g-eps"></div>
+        <div id="g-bkl"></div>
+        <div class="caption">点右边的草稿卡片可以切换判卷结果：答对 1 分 → 只有格式对 0.2 分 → 答错 0 分。每份草稿的新旧概率比 $\rho_i$ 取书中实战脚本的数值（超过 8 份时循环使用），并假设旧模型就是参考模型，即 $r_i=1/\rho_i$。8 份是书中为了好算取的例子，论文里 DeepSeek-R1 每题采样 16 份、DeepSeekMath 64 份；KL 系数论文里在 0.001（R1）到 0.04（DeepSeekMath）之间，书中实战脚本取 0.04。</div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div class="small" style="font-weight:650;color:var(--navy)">抽样估计 KL：$-\ln r$ 还是 $r-1-\ln r$？</div>
+        <div id="g-shift"></div>
+        <div id="g-n"></div>
+        <div class="btn-row"><button class="btn ghost" id="g-resample">重新抽样</button></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✎</span><span class="ct">8 份草稿与组内相对加分</span></div>
+          <div class="drafts" id="g-drafts"></div>
+          <div class="viz h260" id="g-bars" style="margin-top:10px"></div>
+          <div class="legend"><span><i style="background:var(--c6)"></i>相对加分 $\hat A_i$</span><span><i style="background:var(--c1)"></i>PPO 夹子项</span><span><i style="background:var(--c4)"></i>$-\beta k_3$</span></div>
+        </div>
+        <div class="stats" id="g-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">k₃</span><span class="ct">$k_3(r)=r-1-\ln r\ge0$</span></div>
+            <div class="viz h260" id="g-k3"></div>
+            <div class="legend"><span><i style="background:var(--c4)"></i>$k_3$</span><span><i style="background:#9aa5b1"></i>旧式 $-\ln r$</span><span><i style="background:var(--c2);height:2px"></i>$\tfrac12(r-1)^2$</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c6)">≈</span><span class="ct">每个样本算出来的值</span><span class="sub" id="g-est-sub"></span></div>
+            <div class="viz h260" id="g-est"></div>
+            <div class="legend"><span><i style="background:#9aa5b1"></i>$-\ln r$（旧式）</span><span><i style="background:var(--c4)"></i>$k_3$</span><span><i style="background:var(--ink);height:2px"></i>真实 KL</span><span>竖线：各自的样本平均</span></div>
+          </div>
+        </div>
+        <div class="stats" id="g-stats2"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\hat{A}_i = \frac{R_i - \operatorname{mean}(R_1, \dots, R_G)}{\operatorname{std}(R_1, \dots, R_G) + \epsilon},\qquad k_3(r_{i,t}) = r_{i,t} - 1 - \ln r_{i,t},\quad r_{i,t}=\frac{\pi_{\text{ref}}(y_{i,t})}{\pi_{\mathbf w}(y_{i,t})},\qquad \mathbb{E}_{y\sim\pi_{\mathbf w}}[k_3]=D_{\text{KL}}(\pi_{\mathbf w}\,\|\,\pi_{\text{ref}}) \\ \mathcal{J}_{\text{GRPO}} = \mathbb{E}\Big[ \frac{1}{G}\sum_{i=1}^G \frac{1}{|y^{(i)}|}\sum_{t} \Big( \min\big(\rho_{i,t}\hat{A}_i,\ \operatorname{clip}(\rho_{i,t}, 1-\epsilon, 1+\epsilon)\hat{A}_i\big) - \beta\, k_3(r_{i,t}) \Big) \Big]\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">不用陪练模型（Critic），同一道题自己写 $G$ 份草稿，自己跟自己比：高于平均分的整篇表扬，低于平均分的整篇批评。全对或全错时标准差为 0，相对加分全是 0，这道题自动跳过。$k_3$ 每一项都不小于 0，平均值又恰好等于 KL 散度。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认是书中正文：$R=[1,0,1,0,0,0,1,1]$，平均分 0.5、标准差 0.5，答对的 $\hat A=+1$，答错的 $\hat A=-1$。</li>
+            <li>点“零算力实战版”：第 4 份只得了格式分 0.2，平均分变成 0.525，它的相对加分是负的，但没有全错的那么负。</li>
+            <li>把 8 份草稿全点成答对（或全点成答错）：标准差为 0，所有 $\hat A_i=0$，这道题不产生任何斜率。</li>
+            <li>看 $k_3$ 曲线：$k_3(0.5)\approx0.193$、$k_3(1.5)\approx0.095$，都是正的；旧式 $-\ln r$ 在 $r>1$ 时是负数。</li>
+            <li>看右边的抽样：两种估计的平均值都落在真实 KL 附近，但 $-\ln r$ 的单次值有正有负、波动大，$k_3$ 永远非负、波动小得多。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

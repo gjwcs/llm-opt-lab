@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 13 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch13.js"></script>
+</head>
+<body data-chapter="13">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="sam" data-title="窄深井与 SAM 探路">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">派一个探路员</span></div>
+        <div class="control"><div class="control-head"><span>地形</span></div><div id="s-land"></div></div>
+        <div id="s-rho"></div>
+        <div id="s-lr"></div>
+        <div id="s-steps"></div>
+        <div id="s-shift"></div>
+        <div class="btn-row"><button class="btn teal" id="s-play">▶ 播放</button><button class="btn ghost" id="s-reset">回到默认起点</button></div>
+        <div class="caption">在地图上按住拖动白点换起点。“考场”把整片地形沿 $(1,1)$ 方向平移 $\delta$：考场损失 $=\mathcal L(\mathbf w-\delta(1,1))$，模拟期末题目和练习题“考的是同一个公式，但数字变了一点”。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">⛰</span><span class="ct">GD 与 SAM 的路线</span><span class="sub" id="s-sub"></span></div>
+          <div class="viz h420" id="s-map"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>普通梯度下降</span><span><i style="background:var(--c3)"></i>SAM</span><span><i style="background:var(--c4)"></i>探路一步 $\hat{\boldsymbol\epsilon}=\rho\,\mathbf g/\|\mathbf g\|$</span><span id="s-leg-valley"><i style="background:linear-gradient(90deg,#D1495B,#2F8F5B)"></i>谷底线（红尖 → 绿平）</span></div>
+        </div>
+        <div class="stats" id="s-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">①②</span><span class="ct">SAM 一步拆解（在起点处）</span></div>
+          <div id="s-hand" class="formula" style="border-left-color:var(--c3)"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c2)">∪</span><span class="ct">书中两条抛物线：宽盆地 $w^2$ 与窄深井 $10000w^2$</span></div>
+          <div class="viz h260" id="s-parab"></div>
+          <div class="stats" id="s-stats2" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\min_{\mathbf{w}} \max_{\|\boldsymbol{\epsilon}\|_2 \le \rho} \mathcal{L}(\mathbf{w} + \boldsymbol{\epsilon}),\qquad \hat{\boldsymbol{\epsilon}}_t = \rho \frac{\nabla \mathcal{L}(\mathbf{w}_t)}{\|\nabla \mathcal{L}(\mathbf{w}_t)\|_2},\qquad \mathbf{w}_{t+1} = \mathbf{w}_t - \eta \nabla \mathcal{L}(\mathbf{w}_t+\hat{\boldsymbol\epsilon}_t) \\ \nabla \mathcal{L}(\mathbf{w}_t+\hat{\boldsymbol\epsilon}_t) \approx \nabla \mathcal{L}(\mathbf{w}_t) + \rho\,\mathbf{H}(\mathbf{w}_t)\frac{\nabla \mathcal{L}(\mathbf{w}_t)}{\|\nabla \mathcal{L}(\mathbf{w}_t)\|_2},\qquad \mathcal L(\mathbf w^*+\boldsymbol\delta)\approx\mathcal L(\mathbf w^*)+\tfrac12\boldsymbol\delta^\top\mathbf H\boldsymbol\delta\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">谷底处一阶导数为 0，考场偏移 $\boldsymbol\delta$ 带来的罚分完全由二阶导数 $\mathbf H$ 决定。SAM 在高处测的斜率里自动多出 $\rho\mathbf H\hat{\mathbf g}$ 这一项：越尖的地方被推得越狠，所以它站不住窄深井。“一谷多底”地形 $\tfrac12(w_1w_2-1)^2$ 的谷底是整条双曲线 $w_1w_2=1$，训练损失处处为 0，但曲率 $\lambda_{\max}=w_1^2+w_2^2$ 在两端很大、在 $(1,1)$ 处最小。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认从 $(3.6,\,0.15)$ 出发：GD 一头扎进离自己最近的谷底 $(3.6,\,0.28)$，曲率约 13；SAM 先落到谷底，再沿着谷底线一路滑向 $(1,1)$，曲率降到 2 左右。两者训练损失都几乎是 0，考场损失 SAM 低好几倍。</li>
+            <li>把 $\rho$ 调到 0：SAM 退化成普通 GD，两条路线重合。$\rho$ 越大，滑向平坦处越快。</li>
+            <li>切到“书中椭圆碗”：起点 $(1.0,\,0.1)$、$\rho=0.1$、$\eta=0.015$，拆解卡片里就是书中手算的 $\mathbf g_0=(1,10)$、$\hat{\boldsymbol\epsilon}\approx(0.010,0.0995)$、$\mathbf g_{\text{adv}}\approx(1.010,19.95)$：陡方向的斜率几乎翻倍，缓方向只涨 1%。</li>
+            <li>看两条抛物线：考场偏移 0.1 时，宽盆地罚 0.01，窄深井罚 100；探路员走出 0.1 后，测到的斜率一个是 0.202，一个是 2020。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="grok" data-title="顿悟与权重衰减">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">学做“模 11 加法”</span></div>
+        <div id="k-lam"></div>
+        <div id="k-lr"></div>
+        <div id="k-frac"></div>
+        <div class="btn-row"><button class="btn teal" id="k-run">▶ 重新训练</button><button class="btn ghost" id="k-cmp">对比 4 种 $\lambda$</button></div>
+        <div class="caption" id="k-prog"></div>
+        <div class="caption">玩具模型 = 两条“电路”相加：<b>查表电路</b>给每道题一个固定的随机特征 $\boldsymbol\phi(a,b)\in\mathbb R^{64}$，再乘一张可训练的大表 $\mathbf W$，能把练习题全部背下来，但对没见过的题只会瞎猜；<b>规律电路</b>直接给正确答案 $(a+b)\bmod 11$ 加分 $0.5\,uv$，$u,v$ 从 $10^{-3}$ 起步，所以一开始几乎没有斜率、学得很慢。全批量梯度下降 + 解耦权重衰减 $\mathbf w\leftarrow(1-\eta\lambda)\mathbf w-\eta\nabla\mathcal L$，共 16384 步。这里的步数是玩具模型的；论文里的模运算实验不到 $10^3$ 步就背熟，开窍要等到 $10^5$～$10^6$ 步。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✓</span><span class="ct">练习题与考题的正确率</span><span class="sub">横轴对数刻度</span></div>
+          <div class="viz h300" id="k-acc"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>练习题（训练集）</span><span><i style="background:var(--c4)"></i>考题（没见过的题）</span><span><i style="background:#9aa5b1;height:2px"></i>瞎猜水平 1/11</span></div>
+        </div>
+        <div class="stats" id="k-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">‖w‖²</span><span class="ct">两条电路各占多少“旋钮租金”</span></div>
+          <div class="viz h260" id="k-norm"></div>
+          <div class="legend"><span><i style="background:var(--c2)"></i>查表电路 $\|\mathbf W\|_F^2$</span><span><i style="background:var(--c3)"></i>规律电路 $u^2+v^2$</span><span><i style="background:var(--slate)"></i>总和</span></div>
+        </div>
+        <div class="card" id="k-cmp-card" style="display:none">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">λ</span><span class="ct">不同权重衰减下的考题正确率</span></div>
+          <div class="viz h260" id="k-cmpcv"></div>
+          <div class="legend" id="k-cmp-leg"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{aligned}&\mathbf{w}_{t+1} = (1 - \eta \lambda)\mathbf{w}_t - \eta \nabla \mathcal{L}_{\text{train}}(\mathbf{w}_t),\qquad \Delta T_{\text{grok}} \approx \frac{1}{\eta\lambda}\ln\!\left(\frac{R_{\text{mem}}}{R_{\text{grok}}}\right)\\ &\text{租旋钮费：}\ \tfrac{\lambda}{2}\|\mathbf w_{\text{mem}}\|^2=\tfrac{0.01}{2}\times1000=5.00,\qquad \tfrac{\lambda}{2}\|\mathbf w_{\text{grok}}\|^2=\tfrac{0.01}{2}\times10=0.05\end{aligned}$$</div>
+          <p class="small muted" style="margin-bottom:0">书中的例子：$\eta=0.001$、$\lambda=0.25$，$R_{\text{mem}}/R_{\text{grok}}=20/2$，$\Delta T\approx\ln10/0.00025\approx9200$ 步。背完题之后练习题的罚分已经是 0，只剩权重衰减每步把旋钮捏小 $(1-\eta\lambda)$ 倍；查表电路越缩越背不住，规律电路用小得多的旋钮就能做对所有题，于是慢慢接管。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认 $\lambda=0.03$：几十步内练习题就 100% 正确，考题却在 9% 左右（瞎猜）徘徊很久；一千多步后考题正确率突然冲到 100%，这就是“顿悟”。</li>
+            <li>看旋钮租金图：背书阶段查表电路的 $\|\mathbf W\|^2$ 先涨上去；顿悟时它被压下来，规律电路接管，总租金变小。</li>
+            <li>把 $\lambda$ 调到 0 再训练：在这个玩具模型里，16384 步内考题一直是瞎猜水平，查表电路的旋钮越背越大，没有任何力量逼它换路。真实实验没这么绝对：Power 等人论文图 1 那组用的就是不带权重衰减的 Adam，也开窍了，只是要等到 $10^5$～$10^6$ 步；权重衰减能让顿悟来得早得多。</li>
+            <li>点“对比 4 种 $\lambda$”：权重衰减越大，顿悟来得越早，和 $\Delta T\propto1/(\eta\lambda)$ 的趋势一致。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="merge" data-title="模型合并与 TIES">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">把两个模型加起来除以 2</span></div>
+        <div class="control"><div class="control-head"><span>地形</span></div><div id="m-land"></div></div>
+        <div id="m-alpha"></div>
+        <div class="btn-row"><button class="btn ghost" id="m-book">书中 A、B 两点</button></div>
+        <div class="caption">在图上拖动 A、B 两个模型。</div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div class="small" style="font-weight:650;color:var(--navy)">TIES：3 个专家、4 个旋钮</div>
+        <div class="control"><div class="control-head"><span>任务向量</span></div><div id="m-vec"></div></div>
+        <div id="m-trim"></div>
+        <div class="caption">在右下图里上下拖动任意一根细柱，可以改专家的任务向量 $\boldsymbol\tau_m$。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">A·B</span><span class="ct">参数平面</span></div>
+            <div class="viz sq" id="m-plane" style="max-height:380px"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">ℒ</span><span class="ct">沿 A→B 连线的损失</span></div>
+            <div class="viz sq" id="m-line" style="max-height:380px"></div>
+          </div>
+        </div>
+        <div class="stats" id="m-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">τ</span><span class="ct">TIES 三步：修剪 → 选符号 → 只平均同号的</span></div>
+          <div class="viz h300" id="m-ties"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>专家 1</span><span><i style="background:var(--c2)"></i>专家 2</span><span><i style="background:var(--c5)"></i>专家 3</span><span><i style="background:#9aa5b1"></i>简单平均</span><span><i style="background:var(--c3)"></i>TIES</span><span>空心柱：被修剪或投了反对票、没参与平均</span></div>
+          <div style="position:relative;overflow-x:auto;margin-top:6px"><table class="data" id="m-table" style="min-width:560px"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\frac{f(a) + f(b)}{2} - f\Big(\frac{a+b}{2}\Big) = \frac{(a-b)^2}{4} \ge 0\quad(f(x)=x^2)$$</div>
+          <div class="formula">$$\mathbf{w}_{\text{TIES}} = \mathbf{w}_{\text{pre}} + \alpha\,\boldsymbol{\tau}_{\text{TIES}},\qquad \tau_{\text{TIES}, i} = \frac{1}{|\mathcal{A}_i|}\sum_{m \in \mathcal{A}_i} \hat{\tau}_{m, i},\qquad \mathcal{A}_i = \Big\{m : \hat{\tau}_{m,i} \ne 0,\ \operatorname{sign}(\hat{\tau}_{m,i}) = \operatorname{sign}\Big(\sum_{k} \hat{\tau}_{k,i}\Big)\Big\}$$</div>
+          <p class="small muted" style="margin-bottom:0">只要两个模型在同一个碗里，取平均一定不比两端的平均差，而且省下的罚分正好是距离平方的四分之一。如果中间隔着一座山，平均反而会掉进山脊。TIES 先把每个专家改动最小的那部分修剪成 0，再按总和投票选出每个旋钮的方向，最后只对“赞成派”求平均，避免被唱反调的专家和不相干的 0 稀释。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认是书中的 $\mathbf w_A=(-0.2,\,0.4)$、$\mathbf w_B=(0.4,\,-0.2)$：两端罚分都是 0.20，中点 $(0.1,0.1)$ 只有 0.02，正好省下 $0.09+0.09=0.18$。</li>
+            <li>切到“两个碗之间隔着山”：A、B 各在一个碗底，连线中点正好落在山脊上，平均后的罚分比两端都高。合并的前提是“同一个盆地”。</li>
+            <li>TIES 默认是书中正文的例子：第 1 号旋钮简单平均只有 $+0.267$，TIES 剔除唱反调的 $-0.2$ 后是 $+0.50$；四个旋钮依次是 $(0.50,-0.50,-0.40,0.30)$。</li>
+            <li>切到“零算力实战版”（把两个 0 换成 0.01、0.02，并修剪每个专家最小的 25%）：结果和正文版一样。再把修剪比例调到 0：第 4 号旋钮的 0.02 混进平均，结果从 0.30 被稀释到约 0.21（第 3 号旋钮的 0.01 方向不对，投票时已被排除）。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

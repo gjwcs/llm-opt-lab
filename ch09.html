@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 9 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch09.js"></script>
+</head>
+<body data-chapter="9">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="valley" data-title="斜峡谷下山赛">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">把峡谷斜着摆</span></div>
+        <div id="v-angle"></div>
+        <div id="v-kappa"></div>
+        <div id="v-steps"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div id="v-lr-gd"></div>
+        <div id="v-lr-adam"></div>
+        <div id="v-eta"></div>
+        <div class="btn-row"><button class="btn ghost" id="v-p10">书中起点 $(1,0)$</button><button class="btn ghost" id="v-p11">起点 $(1,1)$</button></div>
+        <div class="caption">在左图里按住拖动白色圆点可以换起点。地形是 $f(\boldsymbol\theta)=\tfrac12\boldsymbol\theta^\top\mathbf H\boldsymbol\theta$，陡方向曲率固定为 200，缓方向曲率为 $200/\kappa$。默认值就是书中的 $f(x,y)=50(x+y)^2+0.5(x-y)^2$。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">⛰</span><span class="ct">四种走法的足迹</span></div>
+            <div class="viz sq" id="v-map" style="max-height:440px"></div>
+            <div class="legend"><span><i style="background:var(--c1)"></i>梯度下降 GD</span><span><i style="background:var(--c2)"></i>Adam</span><span><i style="background:var(--c5)"></i>对角预条件 $\operatorname{diag}(\mathbf H)^{-1}\mathbf g$</span><span><i style="background:var(--c3)"></i>牛顿法 $\mathbf H^{-1}\mathbf g$</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">↘</span><span class="ct">损失随步数下降</span></div>
+            <div class="viz sq" id="v-loss" style="max-height:440px"></div>
+            <div class="caption">纵轴是对数刻度。牛顿法取 $\eta=1$ 时第 1 步就落到谷底，损失变成 0（图上画在最底部）。</div>
+          </div>
+        </div>
+        <div class="stats" id="v-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">H</span><span class="ct">在起点处手算一遍</span></div>
+          <div id="v-hand" class="formula" style="border-left-color:var(--c3)"></div>
+          <p class="small muted" style="margin:0">Adam 与对角预条件只看得见 $\mathbf H$ 对角线上的两个数；峡谷斜着摆时，真正的弯曲信息藏在非对角元里，只有整张 $\mathbf H^{-1}$ 才能把它“掰正、捏圆”。</p>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\mathcal{L}(\boldsymbol{\theta}_t + \Delta \boldsymbol{\theta}) \approx \mathcal{L}(\boldsymbol{\theta}_t) + \mathbf{g}_t^\top \Delta \boldsymbol{\theta} + \frac{1}{2} \Delta \boldsymbol{\theta}^\top \mathbf{H}_t \Delta \boldsymbol{\theta} \\ \Longrightarrow\quad \Delta \boldsymbol{\theta}_{\text{Newton}} = -\mathbf{H}_t^{-1} \mathbf{g}_t,\qquad \boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \eta \mathbf{H}_t^{-1} \mathbf{g}_t\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">梯度下降的稳定上限是 $\eta<2/\lambda_{\max}=0.01$，缓方向每步只能缩小 $(1-\eta\lambda_{\min})$ 倍，所以条件数 $\kappa=\lambda_{\max}/\lambda_{\min}$ 越大越慢。把坐标系随便拧歪（$\boldsymbol\theta=\mathbf A\boldsymbol\phi$），牛顿步 $-\mathbf H^{-1}\mathbf g$ 里的 $\mathbf A$ 会全部约掉，所以牛顿法不在乎峡谷朝哪个方向摆；Adam 的“十字尺子”只沿坐标轴量，它在乎。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认是书中的 $45^\circ$ 峡谷与零算力实战：GD 学习率 0.009、Adam 学习率 0.1，各走 50 步，从 50.5 出发，GD 停在 0.08 左右，Adam 停在 0.42 左右，都还在半山腰；牛顿法 1 步把误差压到 0。</li>
+            <li>把倾斜角拖到 $0^\circ$（峡谷正着摆）：对角预条件也一步到底，Adam 也快了很多。再拖回 $45^\circ$，它们立刻失灵，牛顿法纹丝不动。</li>
+            <li>把 GD 学习率推过 $2/\lambda_{\max}=0.01$：路线在两壁之间越弹越远，损失直线上升。</li>
+            <li>把 $\kappa$ 调到 1000：GD 在缓坡方向几乎不动；牛顿法依然 1 步。再把牛顿步长 $\eta$ 调到 0.5，每步误差刚好减半。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="kfac" data-title="大表拆成两张小表">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">一层 $2\times2$ 权重 $\mathbf y=\mathbf W\mathbf x$</span></div>
+        <div id="k-x1"></div>
+        <div id="k-x2"></div>
+        <div id="k-g1"></div>
+        <div id="k-g2"></div>
+        <div class="btn-row"><button class="btn ghost" id="k-book">书中数字</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div class="small" style="font-weight:650;color:var(--navy)">真实大小的一层（FP32，每个数 4 字节）</div>
+        <div id="k-m"></div>
+        <div id="k-n"></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">⊗</span><span class="ct">$4\times4$ 费雪大表 $=\mathbf L\otimes\mathbf R$</span></div>
+          <div class="viz h340" id="k-kron"></div>
+          <div class="caption">左：把斜率表 $\mathbf G=\mathbf g\mathbf x^\top$ 一行一行拉成一列（$\operatorname{vec}(\mathbf G)=[20,30,-10,-15]$）再自乘得到的 $4\times4$ 大表，按 $2\times2$ 分块；右：左小表 $\mathbf L=\mathbf g\mathbf g^\top$ 与右小表 $\mathbf R=\mathbf x\mathbf x^\top$。颜色：红正蓝负。</div>
+        </div>
+        <div class="stats" id="k-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">GB</span><span class="ct">一层 $m\times n$ 权重要记多少个数？</span><span class="sub">对数横轴</span></div>
+          <div class="viz h260" id="k-mem"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c5)">¼</span><span class="ct">Shampoo 为什么偏偏是 $-1/4$ 次方？</span></div>
+          <div class="row2">
+            <div>
+              <div id="k-rot"></div>
+              <div id="k-pow"></div>
+              <div id="k-shampoo-mats" class="small"></div>
+            </div>
+            <div class="viz h300" id="k-sv"></div>
+          </div>
+          <p class="small muted" style="margin-bottom:0">斜率表取书中的 $\mathbf G_1=\operatorname{diag}(16,1)$ 再转个角度；学习率 $\eta=0.1$。左右各乘 $(\mathbf G\mathbf G^\top)^{p}$ 与 $(\mathbf G^\top\mathbf G)^{p}$ 后，奇异值变成 $\sigma^{1+4p}$：$p=-1/4$ 时两个通道都正好是 1。</p>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}\mathbf G=\mathbf g\mathbf x^\top,\qquad \mathbf F=\mathbb E\big[\operatorname{vec}(\mathbf G)\operatorname{vec}(\mathbf G)^\top\big]\approx \mathbb E[\mathbf g\mathbf g^\top]\otimes\mathbb E[\mathbf x\mathbf x^\top]=\mathbf L\otimes\mathbf R \\ \Delta\mathbf W_{\text{K-FAC}}=-\eta\,\mathbf L^{-1}\mathbf G\,\mathbf R^{-1}\end{gathered}$$</div>
+          <div class="formula">$$\begin{gathered}\mathbf{L}_t=\mathbf L_{t-1}+\mathbf G_t\mathbf G_t^\top,\qquad \mathbf R_t=\mathbf R_{t-1}+\mathbf G_t^\top\mathbf G_t \\ \mathbf{W}_{t+1} = \mathbf{W}_t - \eta \big(\mathbf{L}_t + \epsilon \mathbf{I}_m\big)^{-1/4} \mathbf{G}_t \big(\mathbf{R}_t + \epsilon \mathbf{I}_n\big)^{-1/4}\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">把 $mn\times mn$ 的大表换成 $m\times m$ 与 $n\times n$ 两张小表，记账量从 $(mn)^2$ 降到 $m^2+n^2$。单步时 $\mathbf L=\mathbf G\mathbf G^\top=\mathbf U\boldsymbol\Sigma^2\mathbf U^\top$，于是 $\mathbf L^{-1/4}\mathbf G\mathbf R^{-1/4}=\mathbf U\boldsymbol\Sigma^{-1/2}\boldsymbol\Sigma\boldsymbol\Sigma^{-1/2}\mathbf V^\top=\mathbf U\mathbf V^\top$。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认是书中的 $\mathbf x=(2,3)$、$\mathbf g=(10,-5)$：$\mathbf G=\left[\begin{smallmatrix}20&30\\-10&-15\end{smallmatrix}\right]$，大表左上块是 $100\mathbf R$，右上块是 $-50\mathbf R$。</li>
+            <li>随便拖动 4 个滑块：$4\times4$ 大表永远是 $\mathbf R$ 的四个倍数拼起来的，这正是 $\mathbf L\otimes\mathbf R$。</li>
+            <li>看显存图：$4096\times4096$ 的一层，整张费雪表要 112 万 GB，两张小表只要 134 MB，缩小约 839 万倍。</li>
+            <li>Shampoo 卡片里把角度拖到 $45^\circ$：Adam 的第一步变成 $\left[\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right]$ 的倍数，第二个奇异值是 0；$-1/4$ 次方的 Shampoo 依然把两个通道都拉平到 1。把指数拖到 $-1/2$，大小关系反而被颠倒。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="natural" data-title="自然梯度的概率尺子">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">同样改 0.01，差多少？</span></div>
+        <div id="n-p"></div>
+        <div id="n-q"></div>
+        <div class="btn-row"><button class="btn ghost" id="n-a">A：$0.50\to0.51$</button><button class="btn ghost" id="n-b">B：$0.9999\to0.99$</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+        <div class="small" style="font-weight:650;color:var(--navy)">拟合一个正态分布 $\mathcal N(\mu,\sigma^2)$</div>
+        <div id="n-lr-gd"></div>
+        <div id="n-lr-ng"></div>
+        <div id="n-steps"></div>
+        <div class="caption">右下图里拖动白点换起点，拖动星号换目标。损失是目标分布与模型的交叉熵（等于 KL 加常数）。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">F</span><span class="ct">费雪信息 $F(p)=\frac{1}{p(1-p)}$</span></div>
+            <div class="viz h260" id="n-fisher"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c6)">KL</span><span class="ct">真实 KL 与二次近似</span></div>
+            <div class="viz h260" id="n-kl"></div>
+            <div class="legend"><span><i style="background:var(--c6)"></i>精确 $D_{\text{KL}}(p\,\|\,q)$</span><span><i style="background:var(--c2)"></i>$\tfrac12F(p)(q-p)^2$</span></div>
+          </div>
+        </div>
+        <div class="stats" id="n-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">μσ</span><span class="ct">GD 与自然梯度在 $(\mu,\sigma)$ 平面上的路线</span></div>
+          <div class="row2">
+            <div class="viz sq" id="n-plane" style="max-height:420px"></div>
+            <div>
+              <div class="viz h260" id="n-dens"></div>
+              <div class="stats" id="n-stats2" style="margin-top:10px"></div>
+            </div>
+          </div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>普通梯度下降</span><span><i style="background:var(--c3)"></i>自然梯度 $-\eta\mathbf F^{-1}\mathbf g$</span><span><i style="background:var(--c4);height:2px"></i>起点与目标处 KL $=0.2$ 的“等距圈”（费雪椭圆）</span><span><i style="background:#9aa5b1;height:2px"></i>欧氏圆</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{gathered}D_{\text{KL}}\big(p_{\boldsymbol{\theta}} \,\|\, p_{\boldsymbol{\theta} + \Delta\boldsymbol{\theta}}\big) = \tfrac{1}{2} \Delta\boldsymbol{\theta}^\top \mathbf{F}(\boldsymbol{\theta}) \Delta\boldsymbol{\theta} + \mathcal{O}(\|\Delta\boldsymbol{\theta}\|^3) \\ \mathbf{F}(\boldsymbol{\theta}) = \mathbb{E}_{y \sim p_{\boldsymbol{\theta}}}\big[ \nabla \ln p_{\boldsymbol{\theta}} \,(\nabla \ln p_{\boldsymbol{\theta}})^\top \big],\qquad \Delta\boldsymbol{\theta}_{\text{NGD}} = -\eta\, \mathbf{F}^{-1} \mathbf{g}\end{gathered}$$</div>
+          <p class="small muted" style="margin-bottom:0">伯努利分布：$D_{\text{KL}}(p\,\|\,p+\Delta p)\approx\frac12\cdot\frac{1}{p(1-p)}(\Delta p)^2$，这个近似要求 $|\Delta p|$ 远小于 $p$ 和 $1-p$。正态分布 $\mathcal N(\mu,\sigma^2)$ 在参数 $(\mu,\sigma)$ 下 $\mathbf F=\operatorname{diag}(1/\sigma^2,\,2/\sigma^2)$，所以自然梯度步是 $\Delta\mu=-\eta\sigma^2 g_\mu$、$\Delta\sigma=-\eta\frac{\sigma^2}{2}g_\sigma$：$\sigma$ 越小、分布越尖，同样的参数改动引起的概率变化越大，步子就自动越小。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点 A：$F(0.5)=4$，$D_{\text{KL}}=0.0002$，二次近似几乎分毫不差。</li>
+            <li>点 B：$F(0.9999)\approx10^4$，书中按二次公式估算 $\tfrac12\times10000\times0.01^2=0.5$，是 A 的 2500 倍（本页用精确的 $\Delta p=0.0099$ 算得 0.49）。但这么大的改动已经超出二次近似的适用范围：$1-p$ 从 0.0001 变到 0.01，变了 100 倍。用 KL 原式精确算约为 $0.0095$，仍是 A 的近 50 倍，“越接近 0 或 1 越敏感”的结论不变。</li>
+            <li>把 $p$ 拖到 0.99：经验费雪 $(1-p)^2=10^{-4}$，真费雪 $p(1-p)\approx0.01$，差了将近 100 倍，正是书中 9.2.2 节的例子。</li>
+            <li>在下图把起点拖到 $\sigma$ 很小的地方：普通 GD 的 $\mu$ 方向一步冲出画面（斜率 $\propto1/\sigma^2$）；自然梯度乘上 $\sigma^2$ 之后稳稳走向目标。费雪椭圆在 $\sigma$ 小处缩得很小，说明那里“一小步就是一大变化”。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

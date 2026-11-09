@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 6 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch06.js"></script>
+</head>
+<body data-chapter="6">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="tail" data-title="怪兽斜率与生僻词">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div class="small muted"><b>斜率的脾气</b>：平时 $g\approx1$</div>
+        <div id="t-dist" style="margin:6px 0 4px"></div>
+        <div id="t-alpha"></div>
+        <div id="t-spike"></div>
+        <div id="t-eta"></div>
+        <div class="btn-row"><button class="btn ghost" id="t-resample">重新抽样</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <div class="small muted"><b>词表长尾</b>：第 $k$ 名词出场概率 $p_k\propto1/k$</div>
+        <div id="t-V"></div>
+        <div id="t-T"></div>
+        <div class="caption">每个词的参数 $w_k$ 都从 $1$ 出发、目标是 $0$，平均斜率 $\bar g_k=p_kw_k$。SGD 取让第 1 名词一步到位的最大步长 $\eta=1/p_1$；Adam 取 $\eta=0.01$。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">g</span>300 步里抽到的斜率 $|g_t|$（对数坐标）<span class="sub" id="t-sub"></span></div>
+          <div class="viz h260" id="t-trace"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c2)">Δw</span>同一串斜率下，每一步迈多远 $|\Delta w_t|$</div>
+          <div class="viz h260" id="t-steps"></div>
+          <div class="legend"><span><i style="background:var(--c5)"></i>SGD：$\eta|g_t|$</span><span><i style="background:var(--c3)"></i>Adam（$\beta_1=0.9,\ \beta_2=0.99$）：$\eta|\hat m_t|/\sqrt{\hat v_t}$</span></div>
+          <div class="caption">注意怪兽过后 Adam 的步子会暂时变小：分母账本要过大约 $1/(1-\beta_2)=100$ 步才把那个 $1000^2$ 忘掉。宁可慢一点，也不被踹飞。</div>
+        </div>
+        <div class="stats" id="t-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">k</span>词表长尾：走完 $T$ 步，第 $k$ 名词学会了多少<span class="sub" id="t-sub2"></span></div>
+          <div class="viz h300" id="t-zipf"></div>
+          <div class="legend"><span><i style="background:var(--c5)"></i>SGD（$\eta=1/p_1$）</span><span><i style="background:var(--c3)"></i>Adam（$\eta=0.01$）</span><span><i style="background:var(--slate)"></i>虚线：SGD 每步挪动量 $\eta\bar g_k\propto1/k$</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中组合题：三个旋钮各迈一步（$\eta=0.01$）</div>
+          <div style="overflow-x:auto"><table class="data" id="t-book"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$p_k\approx\frac{1}{k\,H_V}\propto\frac1k,\qquad \Delta w_k^{\text{SGD}}=-\eta\,\bar g_k\propto\frac1k,\qquad \Delta w_k^{\text{Adam}}\approx-\eta\,\frac{\bar g_k}{\sqrt{\bar v_k}}=-\eta\,\frac{\cancel{p_k}\mu_k}{\cancel{p_k}|\mu_k|}=-\eta\operatorname{sign}(\mu_k)$$</div>
+          <div class="explain">身高型的斜率规规矩矩待在平均数附近；词频型的斜率偶尔蹦出上千倍的怪兽。SGD 拿步长直接乘斜率，怪兽一来就被踹飞；Adam 的分子分母一起变大，一除还是 $1$ 左右。同样的约分也救了生僻词：出场概率 $p_k$ 同时出现在分子和分母，被整整齐齐约掉。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>选“身高型”：两条步长曲线都很平稳。切到“词频型”：SGD 的步长跟着斜率一起上下跳几个数量级，Adam 基本贴在 $\eta$ 附近。</li>
+            <li>“第 150 步的怪兽斜率”保持 $1000$：SGD 那一步迈出 $10$，Adam 只迈约 $0.01$，正是书中的算账。</li>
+            <li>词表长尾里把 $V$ 拉到 $10^5$：SGD 只学会了排名前一千多的词，排名靠后的词一动不动；Adam 的整条线都贴在 $100\%$。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="cliff" data-title="注意力指数悬崖">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div id="c-a"></div>
+        <div id="c-w0"></div>
+        <div id="c-gd"></div>
+        <div id="c-adam"></div>
+        <div id="c-T"></div>
+        <div class="caption">悬崖山谷 $f(w)=e^{aw}+e^{-aw}$（书中 30 行脚本取 $a=2$），谷底在 $w=0$。三位选手：固定步长的 GD；按局部弯曲度自动缩步的“安全步长”GD，$\eta_t=1/(L_0+L_1|g_t|)$；Adam（$\beta_1=0.9,\ \beta_2=0.99$）。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">f</span>悬崖地形与前 12 步落点</div>
+            <div class="viz sq" id="c-land" style="max-height:380px"></div>
+            <div class="caption">纵轴对数坐标。跑出画面的点贴在边上并标出真实位置。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">|w|</span>离谷底多远 $|w_t|$</div>
+            <div class="viz sq" id="c-dist" style="max-height:380px"></div>
+            <div class="legend"><span><i style="background:var(--c5)"></i>固定步长 GD</span><span><i style="background:var(--c2)"></i>安全步长 GD</span><span><i style="background:var(--c3)"></i>Adam</span></div>
+          </div>
+        </div>
+        <div class="stats" id="c-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c2)">h</span>坡越陡，弯得越急：二阶导数 vs 一阶导数</div>
+          <div class="viz h300" id="c-l0l1"></div>
+          <div class="caption">蓝点：沿着 $w\in[-3,3]$ 取的 $(|f'(w)|,\ f''(w))$；橙线：上界 $L_0+L_1|f'|$，其中 $L_0=2a^2$、$L_1=a$。坡度大到一定程度后，二阶导数和一阶导数成正比。</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中算例：注意力指数层 $f(w)=e^{3w}$ 在 $w=2$ 处</div>
+          <div id="c-book" style="overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$f(q,k)=e^{q\cdot k}\ \Longrightarrow\ \frac{\partial^2 f}{\partial q^2}=k^2e^{q\cdot k}=|k|\cdot\Big|\frac{\partial f}{\partial q}\Big|,\qquad \|\nabla^2\mathcal L(\boldsymbol\theta)\|\le L_0+L_1\|\nabla\mathcal L(\boldsymbol\theta)\|$$</div>
+          <div class="formula">$$\eta_{\text{安全}}(\boldsymbol\theta_t)\approx\frac{1}{L_0+L_1\|\mathbf g_t\|}\quad\Longleftrightarrow\quad \text{Adam 分母}\ \frac{\eta}{\sqrt{\hat{\mathbf v}_t}+\epsilon}\approx\frac{\eta}{|\mathbf g_t|+\epsilon}$$</div>
+          <div class="explain">在指数函数上，斜率越大的地方弯得越急，安全步长必须跟着斜率一起缩小。固定步长只能二选一：要么大到在悬崖上炸飞，要么小到在谷底磨蹭。Adam 的分母恰好就是“除以当前斜率的大小”，自动完成了这件事。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认从 $w_0=2.5$ 出发：固定步长 $\eta=0.02$ 的 GD 第 1 步就被甩到对面更高的悬崖上，随即炸飞；Adam 和安全步长都稳稳下山。</li>
+            <li>把 GD 步长调到 $0.003$（小于 $2/f''(w_0)\approx0.0034$）：它不再炸，但到了谷底每步只缩 $1-0.003\times8\approx0.976$，走 150 步还没到。</li>
+            <li>把 $w_0$ 调回 $1.5$：悬崖矮了，$\eta=0.02$ 的 GD 也能平安下山。陡峭程度决定了固定步长的上限。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="blocks" data-title="分块海森 SGD 必败">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div id="h-preset" style="margin:2px 0 6px"></div>
+        <div id="h-spread"></div>
+        <div id="h-sgd"></div>
+        <div id="h-adam"></div>
+        <div id="h-T"></div>
+        <div class="caption">5 个参数块（词嵌入、QK、VO、MLP、LayerNorm），每块 6 个参数。块与块之间的弯曲度相差 $10^{s}$ 倍，块内只差 $3$ 倍。损失 $\tfrac12\sum_ih_i\theta_i^2$，所有参数从 $1$ 出发。SGD 步长按最陡的那个方向定：$\eta=c/h_{\max}$。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">h</span>五个参数块的弯曲度（对数坐标）</div>
+          <div class="viz h260" id="h-spec"></div>
+        </div>
+        <div class="stats" id="h-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">L</span>总损失（相对初值，对数）</div>
+            <div class="viz h260" id="h-loss"></div>
+            <div class="legend"><span><i style="background:var(--c5)"></i>SGD</span><span><i style="background:var(--c3)"></i>Adam</span><span><i style="background:var(--c2)"></i>理想的“逐块调步长”SGD</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">▦</span>$T$ 步后每个块离谷底多远</div>
+            <div class="viz h260" id="h-bars"></div>
+            <div class="legend"><span><i style="background:var(--c5)"></i>SGD</span><span><i style="background:var(--c3)"></i>Adam</span><span><i style="background:var(--c2)"></i>逐块调步长</span></div>
+            <div class="caption">纵轴为块内参数的均方根 $|\theta|$（对数）。小于 $10^{-12}$ 的贴底显示为圆点。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$T_{\text{SGD}}\propto\max_{b,b'}\frac{h^{(b)}}{h^{(b')}},\qquad T_{\text{Adam}}\propto\max_b\frac{h^{(b)}_{\max}}{h^{(b)}_{\min}}\ll T_{\text{SGD}}$$</div>
+          <div class="formula">$$\mathcal S(\mathbf d)=\frac{\mathbf d^\top\mathbf H\mathbf d}{\|\mathbf d\|_2^2},\qquad \mathcal S(\mathbf d_{\text{SGD}})=\frac{\sum_ih_i^3\theta_i^2}{\sum_ih_i^2\theta_i^2}\approx h_{\max},\qquad \mathcal S(\mathbf d_{\text{Adam}})=\frac1d\sum_ih_i=\bar h\ll h_{\max}$$</div>
+          <div class="explain">SGD 只有一个步长，必须迁就最陡的那一块，于是最平的那一块（往往是词嵌入）几乎不动。Adam 用每个参数自己的斜率大小去除，相当于给每一块各配一个步长，块间悬殊被约掉，只剩块内那点 3 倍的差距。SGD 的方向还专挑陡坡（三次方加权），Adam 的方向看到的只是平均弯曲度。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“CNN 式”（块间差 10 倍）：SGD 和 Adam 都很快，差距不大。</li>
+            <li>点“Transformer 式”（块间差 $10^5$ 倍）：SGD 的词嵌入块走 1000 步几乎没动，Adam 的五个块整整齐齐一起下降。</li>
+            <li>看“方向弯曲度”读数：SGD 方向的弯曲度几乎等于 $h_{\max}$，Adam 方向只等于平均值 $\bar h$。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

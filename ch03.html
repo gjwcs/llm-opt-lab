@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 3 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch03.js"></script>
+</head>
+<body data-chapter="3">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="coins" data-title="抛硬币数假死坑">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div class="small muted"><b>抛硬币模型</b>：每个方向往上翘的概率为 $p$</div>
+        <div id="k-d"></div>
+        <div id="k-p"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <div class="small muted"><b>随机矩阵实测</b>：$\mathbf H=\mu\mathbf I+$ 随机对称矩阵（特征值大致铺满 $[\mu-2,\mu+2]$）</div>
+        <div id="k-n"></div>
+        <div id="k-mu"></div>
+        <div class="btn-row"><button class="btn ghost" id="k-draw">再抽 4000 个</button></div>
+        <div class="caption">$\mu$ 代表海拔：$\mu=0$ 是半山腰（正负弯曲度各占一半），$\mu$ 越大越接近谷底（往上翘的方向越来越多）。</div>
+      </div>
+      <div class="stack">
+        <div class="stats" id="k-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">pᵈ</span>$d$ 个方向同时往上翘的概率（纵轴是 10 的几次方）</div>
+          <div class="viz h300" id="k-curve"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>当前 $p$</span><span><i style="background:var(--c3)"></i>$p=0.9$</span><span><i style="background:var(--c2)"></i>$p=0.99$</span><span>横轴为维度 $d$（对数刻度，最右边是 $10^{11}$）</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c2)">#</span>随机抽 4000 个平坦点：每个点有几条“下坡滑梯”？<span class="sub" id="k-sub"></span></div>
+          <div class="viz h300" id="k-hist"></div>
+          <div class="caption">横轴：负特征值的个数（逃生方向的条数）。最左边一根柱子（$0$ 条滑梯）才是四面封死的假死坑。用 $\mathbf L\mathbf D\mathbf L^\top$ 分解数负主元，和数负特征值的结果完全相同（惯性定理）。</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\mathbb P\big(\text{半山腰平坦点四面封死}\big)=\mathbb P(\lambda_1\gt0,\dots,\lambda_d\gt0)\approx p^d=\exp\Big(-d\ln\frac1p\Big)\xrightarrow{d\to\infty}0$$</div>
+          <div class="explain">连抛 $10000$ 次硬币全是正面的概率是 $(1/2)^{10000}\approx10^{-3010}$。真实的随机矩阵还要更“难”一些：特征值之间互相排斥，想让它们全挤到正半轴上，概率比抛硬币还小。只有走到真正的谷底附近（$\mu$ 变大、$p\to1$），才会出现四面封死的点，而那时你已经离最低点不远了。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>$p=0.5$：$d=1$ 时 $50\%$，$d=2$ 时 $25\%$，$d=10000$ 时 $10^{-3010}$，和书中一致。</li>
+            <li>保持 $\mu=0$，把矩阵维度从 2 调到 8：最左边那根柱子很快消失，柱子堆在正中间（约一半方向是滑梯）。</li>
+            <li>把 $\mu$ 慢慢调到 $2$ 以上：这相当于走到了谷底附近，滑梯越来越少，假死坑才开始出现。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="saddle" data-title="马鞍面上弹射逃生">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div id="s-eta"></div>
+        <div id="s-y0"></div>
+        <div id="s-T"></div>
+        <div id="s-noise"></div>
+        <div class="btn-row"><button class="btn ghost" id="s-book">书中算例 $(1,\,0.001)$，$\eta=0.25$</button></div>
+        <div class="caption">马鞍面 $f(x,y)=x^2-y^2$ 从 $(1,y_0)$ 出发。$x$ 方向往上翘（$+2$），$y$ 方向往下塌（$-2$，即 $\gamma=2$）。把 $y_0$ 拖到最左端就是“正好站在山脊上”的 $y_0=0$。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">⛰</span>马鞍面地形与轨迹</div>
+            <div class="viz sq" id="s-map" style="max-height:400px"></div>
+            <div class="caption">红色高、蓝色低。虚线圆是逃逸半径 $R=1$。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">log</span>逃生方向的偏离 $|y_t|$（对数坐标）</div>
+            <div class="viz sq" id="s-log" style="max-height:400px"></div>
+            <div class="caption">实线：实测；虚线：$(1+2\eta)^t|y_0|$。在对数坐标里，指数增长就是一条直线。</div>
+          </div>
+        </div>
+        <div class="stats" id="s-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>逐步账本<span class="sub">随左侧参数实时重算</span></div>
+          <div style="overflow-x:auto"><table class="data" id="s-table"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$x_{t+1}=(1-2\eta)\,x_t,\qquad y_{t+1}=y_t-\eta(-2y_t)=(1+2\eta)\,y_t\quad(\text{负负得正})$$</div>
+          <div class="formula">$$y_t=(1+\eta\gamma)^t\,y_0\quad\Longrightarrow\quad T_{\text{escape}}=\frac{\ln(R/|y_0|)}{\ln(1+\eta\gamma)}\approx\frac{1}{\eta\gamma}\ln\frac{R}{|y_0|}$$</div>
+          <div class="explain">只要逃生方向上有一丝偏离，梯度下降就会按 $(1+\eta\gamma)^t$ 把它放大，逃逸步数只和 $\ln(1/|y_0|)$ 成正比：偏离小一百万倍，也只多走几十步（$\eta\gamma=0.5$ 时约 34 步）。唯一的危险是 $y_0$ 恰好等于 $0$，这时一点小噪声（抽题带来的随机抖动）就足以把小球推下滑梯，这就是“扰动梯度下降”。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“书中算例”：$y$ 依次是 $0.0015$、$0.00225$、$0.003375$……第 20 步 $y_{20}\approx3.325$，海拔 $\approx-11.06$。</li>
+            <li>把 $y_0$ 从 $10^{-3}$ 拖到 $10^{-6}$：偏离小了一千倍，逃逸步数只多了约 17 步（$\ln1000/\ln1.5$）。</li>
+            <li>把 $y_0$ 拖到最左端（$y_0=0$）：小球沿着山脊滑到鞍点中心停住，永远出不来。再勾选“每步加一点随机扰动”，它很快就逃走了。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="eos" data-title="稳定边缘自动压平">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div id="e-preset" style="margin:2px 0 6px"></div>
+        <div id="e-eta"></div>
+        <div id="e-c"></div>
+        <div id="e-ys"></div>
+        <div id="e-eps"></div>
+        <div id="e-T"></div>
+        <div id="e-freeze"></div>
+        <div class="caption">喇叭口山谷 $f(x,y)=\tfrac12yx^2+k(y-y^\star)^2$：坐标 $y$ 就是横向陡峭度 $L(y)=y$。第二项把陡峭度往 $y^\star$ 拽（“渐进锐化”）。实验室默认从 $(0.01,\,6)$ 出发，$k=0.01$，每步给 $x$ 加一点大小为 $\varepsilon$ 的随机抖动；书中 30 行脚本是 $k=0.02$、从 $(0.3,\,9.8)$ 出发、没有抖动、走 40 步。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">λ</span>陡峭度 $\lambda_{\max}=y_t$ 一路涨到 $2/\eta$ 就停住了<span class="sub" id="e-sub"></span></div>
+          <div class="viz h300" id="e-sharp"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>陡峭度 $y_t$</span><span><i style="background:var(--c4)"></i>生死线 $2/\eta$</span><span><i style="background:var(--c3)"></i>没有震荡时它本想去的 $y^\star$</span></div>
+        </div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">x</span>横向震荡 $x_t$</div>
+            <div class="viz h260" id="e-x"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c5)">f</span>损失 $f(x_t,y_t)$：一路颠簸但总体下降</div>
+            <div class="viz h260" id="e-loss"></div>
+          </div>
+        </div>
+        <div class="stats" id="e-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">#</span>检查点：书中脚本打印的第 1、5、10、15、20、30、40 步<span class="sub">当前参数下的实测值</span></div>
+          <div style="overflow-x:auto"><table class="data" id="e-check"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中 6 步手算：$f=\tfrac12yx^2$ 从 $(1,\,11)$ 出发<span class="sub">使用左侧的 $\eta$</span></div>
+          <div style="overflow-x:auto"><table class="data" id="e-table"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$x_{t+1}=\big(1-\eta\lambda_{\max}(y_t)\big)x_t,\qquad y_{t+1}=y_t-\eta\nabla\mathcal L_0(y_t)-\underbrace{\tfrac12\eta\,x_t^2\,\nabla_y\lambda_{\max}(y_t)}_{\text{一旦震荡，立刻把陡峭度往下压}}$$</div>
+          <div class="formula">$$\text{渐进锐化：}\ \lambda_{\max}(\mathbf H_t)\uparrow\frac2\eta\qquad\longrightarrow\qquad\text{稳定边缘巡航：}\ \lambda_{\max}\approx\frac2\eta$$</div>
+          <div class="explain">经典理论说：陡峭度一旦超过 $2/\eta$，$|1-\eta y|\gt1$，小球必然飞出去。可真实山谷的陡峭度会随位置变化：一开始左右震荡，$x_t^2$ 就产生一股推力把 $y$ 往下压，压回 $2/\eta$ 以内后震荡又自动消退。陡峭度就像被恒温器锁在 $2/\eta$ 附近。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>实验室默认参数下：陡峭度从 6 爬到 10（$=2/0.2$）后就在 10 附近上下小幅摆动，再也到不了 15。</li>
+            <li>勾选“关掉震荡反馈”：这就是经典二次理论的世界，陡峭度一过 10，$x$ 指数爆炸。</li>
+            <li>把 $\eta$ 调成 $0.25$：平台降到 $8$ 附近；调成 $0.15$ 并把总步数拉到 1500：平台升到 $13.3$ 附近。平台始终贴着 $2/\eta$。</li>
+            <li>看书中 6 步表：陡峭度 $11\to10.9\to10.756\to10.555\to10.290\to9.962$，第 5 步就压回 10 以内，第 6 步 $9.595$；继续走下去，震荡消失，陡峭度最后停在约 $8.43$。</li>
+            <li>点“书中 30 行脚本”：检查点依次是 $9.833$、$9.966$、$10.130$、$10.281$、$10.399$、$10.298$、$9.529$，冲过 10 之后被震荡压了回来，到不了 15。</li>
+            <li>保持“书中 30 行脚本”，把总步数拉到 1500：这个二维玩具模型只能暂时摁住陡峭度，几百步后摆动越来越大，第 1268 步失控炸飞；实验室默认参数（锐化力度减半、带一点微小抖动）则能一直锁在 10 附近。稳定边缘需要“锐化慢、震荡快”。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

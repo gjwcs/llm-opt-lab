@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 12 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch12.js"></script>
+</head>
+<body data-chapter="12">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="coin" data-title="扔硬币与同号相加">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span><span class="ct">$y=w_1x_1+\cdots+w_dx_d$</span></div>
+        <div id="c-d"></div>
+        <div id="c-lr"></div>
+        <div class="btn-row"><button class="btn ghost" id="c-seed">重新扔一次硬币</button></div>
+        <div class="caption">每个输入 $x_i=\pm1$。初始化时 $w_i$ 像扔硬币一样随机取正负；走一步 Adam 时，$\Delta w_i=-\eta\operatorname{sign}(g_i)=+\eta\operatorname{sign}(x_i)$，每一项 $\Delta w_ix_i=+\eta$ 都同号。小模型基准宽度 $d_{\text{base}}=256$，在它上面调好的学习率是 $\eta_{\text{小}}$。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">Σ</span><span class="ct">把 $d$ 项一项一项加起来</span></div>
+          <div class="viz h300" id="c-walk"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>初始化：$\sum_{i\le k}w_ix_i$（$w_i=\pm1$，扔硬币）</span><span><i style="background:var(--c2)"></i>走一步后：$\sum_{i\le k}\operatorname{sign}(x_i)x_i=k$（同号相加）</span><span><i style="background:#cfd6de"></i>$\pm\sqrt k$</span></div>
+        </div>
+        <div class="stats" id="c-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">d</span><span class="ct">宽度变大时，输出和输出的变化量怎么变？</span><span class="sub">双对数坐标</span></div>
+          <div class="viz h300" id="c-scale"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>初始化输出 $|y_0|$（$\sigma_{\text{init}}=1/\sqrt d$）</span><span><i style="background:var(--c4)"></i>SP：学习率照搬，$\Delta y=d\,\eta_{\text{小}}$</span><span><i style="background:var(--c3)"></i>$\mu$P：$\eta=\eta_{\text{小}}\,d_{\text{base}}/d$，$\Delta y$ 恒定</span><span>圆点：随机实测（20 次的均方根）</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\mathbb E\Big[\big(\textstyle\sum_{i=1}^d w_ix_i\big)^2\Big]=\sum_{i=1}^d\mathbb E[w_i^2x_i^2]+\sum_{i\ne j}\underbrace{\mathbb E[w_iw_j]\,x_ix_j}_{=0}=d\sigma^2\;\Longrightarrow\;\sigma_{\text{init}}=\frac{1}{\sqrt d},\qquad \Delta y=\sum_{i=1}^d\eta\operatorname{sign}(x_i)\,x_i=\eta\sum_{i=1}^d|x_i|=d\,\eta\;\Longrightarrow\;\eta=\frac{\eta_{\text{base}}\,d_{\text{base}}}{d}$$</div>
+          <div class="formula">$$\frac{1}{\sqrt{d}}\|\Delta \mathbf{h}_l\|_2 = \begin{cases} \Theta(d) & \text{SP + Adam（学习率照搬，越宽越炸）} \\ \Theta(1/\sqrt d) & \text{NTK（前面乘 } 1/\sqrt d\text{，越宽越冻）} \\ \Theta(1) & \mu\text{P（学习率除以宽度，刚刚好）} \end{cases}$$</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认 $d=256$：初始化时 256 个 $\pm1$ 正负抵消，加起来大多落在 $\pm16$（$\sqrt{256}=16$）以内；走一步之后 256 项全部同号，总和就是 256。</li>
+            <li>把宽度拖到 4096：蓝线在 $\pm64$ 之间晃，橙线一路涨到 4096。照搬 $\eta=0.001$，$\Delta y$ 从 0.256 变成 4.096，暴涨 16 倍；$\mu$P 把学习率除以 16，$\Delta y$ 仍是 0.256。</li>
+            <li>多点几次“重新扔一次硬币”：蓝线每次都不一样，但大小总在 $\sqrt d$ 附近；橙线永远是一条直线。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="lrshift" data-title="最优学习率漂移">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span><span class="ct">真的训一遍</span></div>
+        <p class="small" style="margin-top:0">在浏览器里训练 5 种宽度（64 到 1024，正好 16 倍）的两层 ReLU 网络，每种宽度扫 12 个学习率，SP 与 $\mu$P 各一遍，共 120 次训练。</p>
+        <div id="w-steps"></div>
+        <div class="btn-row"><button class="btn teal" id="w-run">▶ 重新扫描</button></div>
+        <div class="caption" id="w-prog">准备中…</div>
+        <div class="caption">任务：拟合一个固定的随机“老师”函数，输入 8 维、32 个样本，Adam（$\beta_1=0.9,\beta_2=0.99$）全批量训练。基准宽度 $d_{\text{base}}=64$：SP 所有层用同一个学习率、输出层初始化 $\sigma=1/\sqrt d$；$\mu$P 输入层学习率不变，输出层学习率除以 $m_d=d/64$、初始化 $\sigma=\sigma_0/m_d$。纵轴是训练结束时的损失。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">SP</span><span class="ct">标准参数化：照搬学习率</span></div>
+            <div class="viz h300" id="w-sp"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c3)">μP</span><span class="ct">最大更新参数化</span></div>
+            <div class="viz h300" id="w-mup"></div>
+          </div>
+        </div>
+        <div class="legend" id="w-legend"></div>
+        <div class="stats" id="w-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">★</span><span class="ct">最优学习率随宽度的变化</span></div>
+          <div class="viz h260" id="w-opt"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>SP</span><span><i style="background:var(--c3)"></i>$\mu$P</span><span><i style="background:#9aa5b1;height:2px"></i>斜率 $-1$ 的参考线（$\eta^*\propto1/d$）</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\text{SP：}\ \eta^*(d)\approx\eta^*(d_{\text{base}})\cdot\frac{d_{\text{base}}}{d}\quad(\text{在小模型上调好的学习率搬到大模型就会炸}),\qquad \mu\text{P：}\ \eta^*(d)\approx\eta_{\text{base}}\quad(\text{零样本迁移})$$</div>
+          <p class="small muted" style="margin-bottom:0">在 $\mu$P 里，“学习率”这个旋钮已经把宽度因子吸收掉了：小模型上扫出来的最优值，直接就是大模型的最优值。这正是“先花 100 块钱在小模型上调参，再一次性训大模型”的底气。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>等扫描完成：左图 SP 的 U 形曲线随宽度一路往左移，最优学习率从 $2^{-4}$ 附近移到 $2^{-8}$ 附近，大约每宽一倍左移一格；右图 $\mu$P 的五条曲线的谷底几乎叠在一起。</li>
+            <li>看 SP 图的右半边：宽模型在小模型最优学习率处已经明显变差，再往右就直接炸掉（曲线冲出图顶）。</li>
+            <li>把训练步数调少或调多再扫一次：曲线的形状会变，但 SP 的漂移和 $\mu$P 的重合都还在。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="table" data-title="μP 换算表">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span><span class="ct">从小模型搬到大模型</span></div>
+        <div id="t-base"></div>
+        <div id="t-d"></div>
+        <div id="t-lr"></div>
+        <div id="t-sig"></div>
+        <div class="btn-row"><button class="btn ghost" id="t-book1">书中：256 → 4096</button><button class="btn ghost" id="t-book2">书中：256 → 8192</button></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c6)">表</span><span class="ct">每一层该填多少？</span><span class="sub" id="t-md"></span></div>
+          <div style="position:relative;overflow-x:auto"><table class="data" id="t-table" style="min-width:600px"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">Δh</span><span class="ct">坐标检查：走一步 Adam 后各层变了多少？</span><span class="sub">双对数坐标</span></div>
+          <div class="viz h300" id="t-check"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>输入层输出 $\|\Delta\mathbf h_1\|/\sqrt d$</span><span><i style="background:var(--c5)"></i>隐藏层输出 $\|\Delta\mathbf h_2\|/\sqrt d$</span><span><i style="background:var(--c2)"></i>最终打分 $|\Delta y|$</span><span>实线 $\mu$P · 虚线 SP</span></div>
+          <div class="caption">在浏览器里真的搭一个“输入 16 维 → 宽 $d$ → 宽 $d$ → 1”的 ReLU 网络（宽度 64 到 2048），按上表的缩放规则初始化（这里基准宽度取 64、学习率取 0.01），喂一个样本、让 $y$ 变大，用 Adam 第一步（$\Delta w=-\eta\operatorname{sign}(g)$）更新一次，再前向一遍量出每层激活的变化。竖线是当前选的宽度（超过 2048 时不画）。</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span><span class="ct">背后的公式</span></div>
+          <div class="formula">$$\begin{aligned}\text{词表输入层：}\ &\sigma_{\text{init}} = \sigma_0, && \eta_{\text{Adam}} = \eta_{\text{base}} \\ \text{隐藏层：}\ &\sigma_{\text{init}} = \frac{\sigma_0}{\sqrt{m_d}}, && \eta_{\text{Adam}} = \frac{\eta_{\text{base}}}{m_d} \\ \text{输出层：}\ &\sigma_{\text{init}} = \frac{\sigma_0}{m_d}\ (\text{或置 } 0), && \eta_{\text{Adam}} = \frac{\eta_{\text{base}}}{m_d} \\ \text{Muon 隐藏层：}\ &\Delta\mathbf W = -\eta_{\text{base}}\sqrt{\tfrac{d_{\text{out}}}{d_{\text{in}}}}\,\mathbf U\mathbf V^\top, && m_d=\frac{d}{d_{\text{base}}}\end{aligned}$$</div>
+          <p class="small muted" style="margin-bottom:0">口诀：有几项相加，学习率就除以几。输入层每个输出只来自 1 个词的嵌入，不除；隐藏层和输出层都是 $d$ 项相加，除以 $m_d$。注意力打分 $\mathbf q^\top\mathbf k$ 训练后也会同号相加，$\mu$P 把 $1/\sqrt{d_{\text{head}}}$ 改成 $1/d_{\text{head}}$。</p>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“书中：256 → 4096”：$m_d=16$，隐藏层初始化 $0.02/4=0.005$、学习率 $1.6\times10^{-3}/16=10^{-4}$，输出层初始化 $0.02/16=0.00125$，和书中 12.5 节的手算一致。</li>
+            <li>点“书中：256 → 8192”（$\eta_{\text{base}}=2\times10^{-3}$）：$m_d=32$，隐藏层和输出层学习率都是 $6.25\times10^{-5}$。</li>
+            <li>看坐标检查图：虚线（SP）的输入层不变，但隐藏层随宽度几乎成正比地往上翘（宽 32 倍放大约 20 倍），最终打分涨得更凶（约 100 倍，因为输出层自己也在同号相加）；实线（$\mu$P）三条都是水平的。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

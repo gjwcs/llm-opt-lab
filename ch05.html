@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 5 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch05.js"></script>
+</head>
+<body data-chapter="5">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="duel" data-title="万倍峡谷四方对决">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div id="d-on" style="display:flex;flex-wrap:wrap;gap:0 14px"></div>
+        <div id="d-eta"></div>
+        <div id="d-sgd"></div>
+        <div id="d-b1"></div>
+        <div id="d-b2"></div>
+        <div id="d-hist"></div>
+        <div id="d-T"></div>
+        <div class="btn-row"><button class="btn ghost" id="d-book">书中 §5.5 手算</button><button class="btn ghost" id="d-script">书中 30 行脚本</button></div>
+        <div class="caption">山谷 $f(w_1,w_2)=50w_1^2+0.005w_2^2$，两个方向的二阶导数相差 $10000$ 倍。$w_1$ 像常用字“的”（斜率大），$w_2$ 像生僻字“熵”（斜率小）。都从 $(1,1)$ 出发，$\epsilon=10^{-8}$。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">⛰</span>两步之内谁走到了哪里</div>
+            <div class="viz sq" id="d-map" style="max-height:380px"></div>
+            <div class="caption">画出前 $\min(T,8)$ 步。跑出画面的点贴在边框上并标出真实坐标。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">w₂</span>生僻字旋钮离谷底多远 $|w_2|$</div>
+            <div class="viz sq" id="d-w2" style="max-height:380px"></div>
+            <div class="caption">对数坐标。SGD 每步只挪万分之一，AdaGrad 被老账拖死，Adam 一路直下。</div>
+          </div>
+        </div>
+        <div class="stats" id="d-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中手算：四大算法的前 2 步<span class="sub">随左侧参数实时重算</span></div>
+          <div style="overflow-x:auto"><table class="data" id="d-table"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\text{AdaGrad：}\ G_{t,i}=G_{t-1,i}+g_{t,i}^2,\quad \theta_{t+1,i}=\theta_{t,i}-\frac{\eta}{\sqrt{G_{t,i}}+\epsilon}\,g_{t,i}\qquad \text{RMSProp：}\ v_{t,i}=\beta v_{t-1,i}+(1-\beta)g_{t,i}^2$$</div>
+          <div class="formula">$$\text{Adam：}\ \hat m_{t,i}=\frac{m_{t,i}}{1-\beta_1^t},\quad \hat v_{t,i}=\frac{v_{t,i}}{1-\beta_2^t},\quad \theta_{t+1,i}=\theta_{t,i}-\eta\,\frac{\hat m_{t,i}}{\sqrt{\hat v_{t,i}}+\epsilon}\approx\theta_{t,i}-\eta\operatorname{sign}(\theta_{t,i})$$</div>
+          <div class="explain">除以“斜率平方的账本开根号”，等于给每个参数配一个专属步长：斜率大的自动缩小、斜率小的自动放大，两个相差一万倍的方向被拉成同样的步子。AdaGrad 的账本只加不减，越走越慢；RMSProp 让旧账打折；Adam 再加上动量和开张还原。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>看手算表：AdaGrad 和 Adam 第 1 步都把两个旋钮整齐地送到 $0.5$；忘了还原的 RMSProp 第 1 步一脚踹到 $-14.81$；Adam 第 2 步就到了 $0.0339$，误差从 $50.005$ 降到 $0.0575$。</li>
+            <li>点“书中 30 行脚本”（AdaGrad 先背上 5000 步高原的老账）：200 步后生僻字旋钮还剩 SGD 约 $0.98$、AdaGrad 约 $0.24$、Adam 约 $0.00002$，与书中脚本的输出一致。AdaGrad 没有“冻死”，但比 Adam 慢了四个数量级。</li>
+            <li>把 SGD 步长拉到 $0.02$ 以上：$w_1$ 方向 $|1-100\eta|\ge1$，当场原地打转或炸飞；而 $w_2$ 要走到 $0.5$ 得花约 7000 步。</li>
+            <li>把 $\beta_2$ 改成 $0.99$：无还原 RMSProp 第 1 步缩成 $1-0.5\times10=-4$，炸得轻一些，但仍然越界。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="bias" data-title="开张账本的还原术">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div id="b-b1"></div>
+        <div id="b-b2"></div>
+        <div id="b-g"></div>
+        <div id="b-noise"></div>
+        <div id="b-eta"></div>
+        <div class="caption">账本从 $m_0=v_0=0$ 开张。斜率 $g_t$ 恒等于 $g$（或在 $g$ 附近抖动），看前几千步账本和步长的变化。横轴为对数刻度。</div>
+      </div>
+      <div class="stack">
+        <div class="stats" id="b-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">v</span>分母账本：$\sqrt{v_t}$ vs 还原后的 $\sqrt{\hat v_t}$</div>
+            <div class="viz h260" id="b-v"></div>
+            <div class="legend"><span><i style="background:var(--c4)"></i>未还原 $\sqrt{v_t}$</span><span><i style="background:var(--c3)"></i>还原后 $\sqrt{\hat v_t}$</span><span><i style="background:var(--slate)"></i>真实 $|g|$</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">m</span>分子账本：$m_t$ vs 还原后的 $\hat m_t$</div>
+            <div class="viz h260" id="b-m"></div>
+            <div class="legend"><span><i style="background:var(--c4)"></i>未还原 $m_t$</span><span><i style="background:var(--c3)"></i>还原后 $\hat m_t$</span><span><i style="background:var(--slate)"></i>真实 $g$</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">Δθ</span>每一步实际迈多远（除以 $\eta$）：四种还原方式</div>
+          <div class="viz h300" id="b-step"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>都不还原、无动量（书中“无还原 RMSProp”）</span><span><i style="background:var(--c2)"></i>都不还原</span><span><i style="background:var(--c5)"></i>只还原 $v$</span><span><i style="background:var(--c3)"></i>都还原（Adam）</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>第 1 步算账</div>
+          <div id="b-first" style="overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$v_t=(1-\beta_2)\sum_{\tau=1}^t\beta_2^{t-\tau}g_\tau^2\ \stackrel{g_\tau\equiv g}{=}\ (1-\beta_2^t)\,g^2\qquad\Longrightarrow\qquad \hat v_t=\frac{v_t}{1-\beta_2^t}=g^2$$</div>
+          <div class="formula">$$\eta_t^{\text{eff}}=\eta\cdot\frac{\sqrt{1-\beta_2^t}}{1-\beta_1^t},\qquad \text{无还原、无动量的第 1 步：}\ \frac{\eta\,g}{\sqrt{(1-\beta_2)g^2}}=\frac{\eta}{\sqrt{1-\beta_2}}$$</div>
+          <div class="explain">账本从 $0$ 开张，权重 $1-\beta_2^t$ 还没攒满，分母被低估了 $\sqrt{1-\beta_2^t}$ 倍。$\beta_2=0.999$ 时第 1 步低估 $31.6$ 倍，步子就放大 $31.6$ 倍。除以 $1-\beta^t$ 恰好把缺的权重补回来。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认 $\beta_2=0.999$、$g=100$、$\eta=0.5$：未还原的分母从 $\sqrt{10}\approx3.16$ 起步，第 1 步迈出 $15.81$；还原后分母一开始就是 $100$，第 1 步正好 $0.5$。</li>
+            <li>看第 1 步算账表：$\hat m_1=10/0.1=100$，$\hat v_1=10/0.001=10000$，与书中一致。</li>
+            <li>勾选“斜率带抖动”：还原后的账本在前几步跳得很厉害，因为里面只有一两个数据。这正是第 8 章要讲的预热（Warmup）的动机。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="memory" data-title="滑动账本记性多长">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div id="m-beta"></div>
+        <div id="m-T1"></div>
+        <div id="m-g1"></div>
+        <div id="m-g2"></div>
+        <div id="m-eta"></div>
+        <div class="caption">前 $T_1$ 步走在陡峭高原上（斜率 $g_{\text{前}}$），之后进入平缓盆地（斜率 $g_{\text{后}}$）。对比 AdaGrad（只加不减）和 RMSProp（旧账打 $\beta$ 折）每一步实际迈多远。</div>
+      </div>
+      <div class="stack">
+        <div class="stats" id="m-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">β</span>今天的一笔账，过 $k$ 步还剩多少权重：$(1-\beta)\beta^k$</div>
+          <div class="viz h260" id="m-w"></div>
+          <div class="caption">竖线：半衰期 $\ln2/\ln(1/\beta)$（橙）与有效记忆步数 $1/(1-\beta)$（红）。阴影是前 $1/(1-\beta)$ 步的累计权重 $1-\beta^{1/(1-\beta)}\approx63\%$。</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">Δw</span>每一步实际迈多远 $\eta|g_t|/\sqrt{\text{账本}}$</div>
+          <div class="viz h300" id="m-step"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>AdaGrad $\sqrt{G_t}$</span><span><i style="background:var(--c3)"></i>RMSProp $\sqrt{v_t}$</span><span>竖线 = 切换点 $T_1$</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中账本：斜率恒为 $g_{\text{前}}$ 时的步长</div>
+          <div style="overflow-x:auto"><table class="data" id="m-table"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$G_t=\sum_{\tau=1}^t g_\tau^2\ \ (\text{只加不减}),\qquad v_t=(1-\beta)\sum_{\tau=1}^t\beta^{t-\tau}g_\tau^2,\qquad T_{\text{mem}}\approx\frac{1}{1-\beta},\qquad t_{1/2}=\frac{\ln2}{\ln(1/\beta)}\approx\frac{0.69}{1-\beta}$$</div>
+          <div class="explain">AdaGrad 的分母是全部历史斜率平方之和，斜率恒为 $g$ 时 $\sqrt{G_t}=|g|\sqrt t$，步子按 $1/\sqrt t$ 一路缩成 $0$。RMSProp 的账本只记最近大约 $1/(1-\beta)$ 步，走出高原后，老账很快被打折忘掉，步子重新放大。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>看书中账本：$g=10$、$\eta=0.1$ 时，AdaGrad 第 100 步迈 $0.01$、第 10000 步迈 $0.001$，RMSProp 一直是 $0.1$。</li>
+            <li>$\beta=0.99$：$0.99^{100}\approx0.366$，$0.99^{500}$ 不到百分之一。切换后绿线（RMSProp）按 $0.99^{k}$ 的速度指数回升（对数坐标里是一条斜线），老账从 $100$ 打折到 $0.01$ 量级约需一千步（书中“过个一千步左右就忘得一干二净”），绿线回到 $0.1$；红线（AdaGrad）则永远停在 $3\times10^{-5}$ 附近。</li>
+            <li>把 $\beta$ 调成 $0.95$：记性只有 20 步，切换后约 200 步就恢复；调成 $0.999$：要等一万多步。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

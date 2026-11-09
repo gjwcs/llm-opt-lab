@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 1 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch01.js"></script>
+</head>
+<body data-chapter="1">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="rulers" data-title="三把尺子量步长">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div class="small muted">导数向量 $\mathbf g=(g_1,g_2)$（也可以直接拖动画布上的蓝色箭头）：</div>
+        <div id="r-preset" style="margin:6px 0 4px"></div>
+        <div id="r-g1"></div>
+        <div id="r-g2"></div>
+        <div id="r-eta"></div>
+        <div id="r-show"></div>
+        <div class="caption">两把尺子都只允许这一步落在各自的“安全圈”里：圆圈尺子要求 $\|\mathbf d\|_2\le\eta$，方框尺子要求每个旋钮 $|d_i|\le\eta$。在圈里找让 $\langle\mathbf g,\mathbf d\rangle$ 最小（下降最多）的那一点。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">d*</span>同一个 $\mathbf g$，两把尺子给出两个下山方向<span class="sub" id="r-sub"></span></div>
+          <div class="viz sq" id="r-plane" style="max-height:470px"></div>
+          <div class="legend"><span><i style="background:var(--c1)"></i>导数 $\mathbf g$（按方向画）</span><span><i style="background:var(--c3)"></i>圆圈尺子 $-\eta\,\mathbf g/\|\mathbf g\|_2$</span><span><i style="background:var(--c2)"></i>方框尺子 $-\eta\,\operatorname{sign}(\mathbf g)$</span><span><i style="background:#c3ccd6"></i>等高线 $\langle\mathbf g,\mathbf d\rangle=$ 常数</span></div>
+        </div>
+        <div class="stats" id="r-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">%</span>步长额度怎么分给两个旋钮</div>
+          <div class="viz h260" id="r-share"></div>
+          <div class="caption">柱高是每个旋钮这一步实际挪动的距离 $|d_i|$。圆圈尺子“按嗓门分话筒”，方框尺子“一人一个限幅器”。</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\mathbf d^*=\arg\min_{\|\mathbf d\|\le\eta}\langle\mathbf g,\mathbf d\rangle=\begin{cases}-\eta\,\mathbf g/\|\mathbf g\|_2, & \text{圆圈尺子 } \|\cdot\|_2\ (\text{SGD 家族})\\[2pt] -\eta\operatorname{sign}(\mathbf g), & \text{方框尺子 } \|\cdot\|_\infty\ (\text{SignSGD / Adam 家族})\\[2pt] -\eta\,\mathbf U\mathbf V^\top, & \text{椭圆拉伸尺子 } \|\cdot\|_{\text{op}}\ (\text{Muon 家族})\end{cases}$$</div>
+          <div class="formula">$$\max_{\|\mathbf u\|_2\le1}\langle\mathbf g,\mathbf u\rangle=\|\mathbf g\|_2,\qquad \max_{\|\mathbf u\|_\infty\le1}\langle\mathbf g,\mathbf u\rangle=\|\mathbf g\|_1,\qquad \max_{\|\mathbf U\|_{\text{op}}\le1}\operatorname{tr}(\mathbf G^\top\mathbf U)=\|\mathbf G\|_{\text{nuc}}$$</div>
+          <div class="explain">换一把尺子，就换一种最速下降算法。圆圈尺子把额度按斜率大小分配，斜率小的旋钮几乎分不到步长；方框尺子让每个旋钮各自顶格拧满 $\eta$。第三把尺子（矩阵的最大拉伸倍数）要等参数排成一张表格时才登场，见实验 3。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>选 $\mathbf g=(3,4)$：圆圈尺子给出 $(-0.6,-0.8)$，预计下降 $5$；方框尺子跳到角落 $(-1,-1)$，预计下降 $7$。</li>
+            <li>选 $\mathbf g=(100,1)$：圆圈尺子把 $99.99\%$ 的额度给了第 1 个旋钮，第 2 个旋钮只挪 $0.01$；方框尺子照样给它整整 $1$ 步。</li>
+            <li>把箭头拖到坐标轴附近，让 $g_2$ 变号：方框尺子的答案立刻从一个角跳到另一个角，它只看正负号。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="overshoot" data-title="步子迈大会跳崖">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div class="small muted">书中算例：</div>
+        <div id="o-preset" style="margin:6px 0 4px"></div>
+        <div id="o-L"></div>
+        <div id="o-eta"></div>
+        <div id="o-x0"></div>
+        <div id="o-T"></div>
+        <div class="caption">山谷是抛物线 $f(x)=\tfrac12Lx^2$（$L=2$ 就是 $x^2$，$L=10$ 就是 $5x^2$），梯度下降每步 $x_{t+1}=x_t-\eta f'(x_t)=(1-\eta L)\,x_t$。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">f</span>小球在抛物线上一步步跳<span class="sub" id="o-sub"></span></div>
+          <div class="viz h340" id="o-curve"></div>
+          <div class="caption">实心点是 $x_0,x_1,x_2,\dots$，箭头标出每一步跳到哪里。跳出画面的点会贴在边上并标出真实数值。</div>
+        </div>
+        <div class="stats" id="o-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">t</span>逐步账本</div>
+            <div style="overflow-x:auto"><table class="data" id="o-table"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c4)">Δ</span>一步能降多少：$-\eta\big(1-\tfrac{L\eta}{2}\big)g^2$</div>
+            <div class="viz h260" id="o-gain"></div>
+            <div class="caption">纵轴是一步的海拔变化除以 $g^2$。曲线在 $\eta=1/L$ 处最低（黄金步长），在 $\eta=2/L$ 处回到 $0$（生死线）。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$f(x_1)-f(x_0)=-\eta\Big(1-\frac{L\eta}{2}\Big)g_0^2\qquad\Longrightarrow\qquad \text{要下降：}\ \eta\lt\frac{2}{L},\qquad \text{降得最多：}\ \eta^*=\frac1L$$</div>
+          <div class="formula">$$\mathcal L(\boldsymbol\theta_{t+1})\le\mathcal L(\boldsymbol\theta_t)-\eta\Big(1-\frac{L\eta}{2}\Big)\|\mathbf g_t\|_2^2\quad\stackrel{\eta=1/L}{\Longrightarrow}\quad \min_{0\le t\lt T}\|\nabla\mathcal L(\boldsymbol\theta_t)\|_2^2\le\frac{2L\big(\mathcal L(\boldsymbol\theta_0)-\mathcal L^*\big)}{T}$$</div>
+          <div class="explain">每一步离谷底的距离乘以 $(1-\eta L)$。它在 $0$ 到 $1$ 之间就单调滑下去；在 $-1$ 到 $0$ 之间就左右来回跳但越跳越小；恰好等于 $-1$ 就在两面山壁之间打乒乓；小于 $-1$ 就越跳越高，几步之内飞出天际。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“$x^2$，$\eta=2$”：$x$ 从 $3$ 跳到 $-9$ 再到 $27$，海拔 $9\to81\to729\to6561$，正是书中急性子同学的下场。</li>
+            <li>点“$5x^2$，$\eta=0.1$”：从 $x_0=2$ 一步正中靶心 $x_1=0$，因为 $\eta=1/L$。</li>
+            <li>点“$\eta=0.2$”：轨迹 $+2\to-2\to+2$ 原地打乒乓；再点“$\eta=0.25$”：$-3$、$4.5$……每步放大 $1.5$ 倍。</li>
+            <li>保持 $\eta$ 不变，只把 $L$ 调大：同一个步长，山谷越陡越容易越界，安全线 $2/L$ 跟着变小。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="valley" data-title="旋转山谷走一步">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div id="v-theta"></div>
+        <div id="v-s1"></div>
+        <div id="v-s2"></div>
+        <div id="v-eta"></div>
+        <div id="v-T"></div>
+        <div class="btn-row"><button class="btn ghost" id="v-book">恢复书中算例</button></div>
+        <div class="caption">导数矩阵 $\mathbf G=\mathbf R_\theta\operatorname{diag}(\sigma_1,\sigma_2)\mathbf R_\theta^\top$：强方向斜率 $\sigma_1$、弱方向斜率 $\sigma_2$，整个山谷转了 $\theta$ 角。从 $\mathbf W_0=\mathbf I$ 出发，谷底在零矩阵，理想的一步是 $-\mathbf I$。为公平起见，三把尺子的更新都缩放到最大拉伸倍数为 $\eta$（方框尺子在 $45^\circ$ 时正好乘 $0.5$）。</div>
+      </div>
+      <div class="stack">
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">○</span>单位圆被 $-\mathbf D$ 拉成什么形状</div>
+            <div class="viz sq" id="v-ellipse" style="max-height:360px"></div>
+            <div class="caption">灰色虚线：单位圆；细线：强方向 $\mathbf u_1$ 与弱方向 $\mathbf u_2$。理想的 $-\mathbf D=\mathbf I$ 应当原样画出单位圆。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">↦</span>强、弱两个方向各迈了多远</div>
+            <div class="viz sq" id="v-bars" style="max-height:360px"></div>
+            <div class="caption">柱高为 $\mathbf u_k^\top(-\mathbf D)\mathbf u_k$，理想值都是 $\eta$。</div>
+          </div>
+        </div>
+        <div class="stats" id="v-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中手算：三把尺子的第 1 步<span class="sub">随左侧滑块实时重算</span></div>
+          <div id="v-book-out" style="overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">‖W‖</span>多走几步：离谷底还有多远 $\|\mathbf W_t\|_F$</div>
+          <div class="viz h260" id="v-err"></div>
+          <div class="legend"><span><i style="background:var(--c3)"></i>圆圈尺子（归一化 SGD）</span><span><i style="background:var(--c2)"></i>方框尺子（SignSGD）</span><span><i style="background:var(--c5)"></i>椭圆拉伸尺子（Muon）</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\mathbf D_{\text{SGD}}=-\eta\frac{\mathbf G}{\|\mathbf G\|_F},\qquad \mathbf D_{\text{Sign}}=-\eta\frac{\operatorname{sign}(\mathbf G)}{\|\operatorname{sign}(\mathbf G)\|_{\text{op}}},\qquad \mathbf D_{\text{Muon}}=-\eta\,\mathbf U\mathbf V^\top\quad(\mathbf G=\mathbf U\boldsymbol\Sigma\mathbf V^\top)$$</div>
+          <div class="explain">Muon 把奇异值分解中间的 $\boldsymbol\Sigma=\operatorname{diag}(100,1)$ 换成单位阵，每个“声部”都平等地迈 $\eta$ 步；它只认矩阵自己的主轴，山谷怎么转都一样。方框尺子只看表格里每个数字的正负号：山谷一转 $45^\circ$，四个格子全被强方向染成正数，弱方向 $(1,-1)$ 被抹成 $0$。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>书中算例（$\theta=45^\circ$，$\sigma=100,1$）：强方向三把尺子都迈 $1.000$，弱方向依次是 $0.010$、$0.000$、$1.000$；剩余误差 $0.99$、$1.00$、$0$。</li>
+            <li>把 $\theta$ 拖回 $0^\circ$：方框尺子突然也一步到位了。符号函数依赖坐标轴，Muon 不依赖。</li>
+            <li>把 $\sigma_2$ 拉到和 $\sigma_1$ 一样大：山谷变成圆碗，三把尺子殊途同归。</li>
+            <li>把步数调到 5：圆圈尺子和方框尺子要多花一步“补”弱方向，Muon 第 1 步就到了谷底。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

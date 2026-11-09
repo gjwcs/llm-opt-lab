@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 8 章 · 在线实验室</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/lab.css">
+<style>@media (max-width: 640px) { .card-title { flex-wrap: wrap; } .card-title .sub { margin-left: 32px; flex-basis: 100%; } .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/lab.js"></script>
+<script defer src="ch08.js"></script>
+</head>
+<body data-chapter="8">
+<main class="container">
+
+  <!-- ========================= 实验 1 ========================= -->
+  <section class="experiment" id="design" data-title="学习率调度设计台">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">1</span>参数控制台</div>
+        <div id="d-T"></div>
+        <div id="d-Tw"></div>
+        <div id="d-dec"></div>
+        <div id="d-emax"></div>
+        <div id="d-emin"></div>
+        <div id="d-sfb"></div>
+        <div id="d-single"></div>
+        <div class="btn-row"><button class="btn ghost" id="d-book">书中脚本参数</button><button class="btn ghost" id="d-seed">换一次随机抖动</button></div>
+        <div class="caption">带抖动的河谷 $f(x,y)=50x^2+0.5y^2$，从 $(1,10)$ 出发。陡峭石壁 $x$ 方向的斜率抖动标准差为 $20$，平缓河道 $y$ 方向为 $0.5$。实线是对无穷多次随机运行取平均的<b>精确期望损失</b>（逐步递推方差算出来，不是蒙特卡洛）。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">η</span>四种学习率方案<span class="sub" id="d-sub"></span></div>
+          <div class="viz h260" id="d-sched"></div>
+          <div class="legend"><span><i style="background:var(--slate)"></i>定步长</span><span><i style="background:var(--c1)"></i>预热 + 余弦退火</span><span><i style="background:var(--c4)"></i>WSD（预热—平飞—急降）</span><span><i style="background:var(--c3)"></i>Schedule-Free（全程固定 $\gamma$）</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">f</span>期望损失（对数坐标）</div>
+          <div class="viz h340" id="d-loss"></div>
+          <div class="caption">虚线：对应方案的一次随机运行（勾选左侧开关后显示）。Schedule-Free 画的是考场答题员 $\mathbf x_t$ 的损失。</div>
+        </div>
+        <div class="stats" id="d-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\eta_t^{\text{WarmCos}}=\begin{cases}\eta_{\max}\dfrac{t}{T_w}, & t\le T_w\\[4pt] \eta_{\min}+\tfrac12(\eta_{\max}-\eta_{\min})\Big(1+\cos\dfrac{(t-T_w)\pi}{T_{\max}-T_w}\Big), & t\gt T_w\end{cases}\qquad \eta_t^{\text{WSD}}=\begin{cases}\eta_{\max}\dfrac{t}{T_w}\\[2pt] \eta_{\max}, & T_w\lt t\le T_s\\[2pt] \eta_{\min}+(\eta_{\max}-\eta_{\min})\Big(1-\dfrac{t-T_s}{T_{\max}-T_s}\Big)\end{cases}$$</div>
+          <div class="formula">$$\mathbb E[\mathcal L(\boldsymbol\theta_t)]-\mathcal L^*\approx\underbrace{\frac12\sum_{i\in\text{平缓河道}}h_i\Big(\theta_{0,i}e^{-h_i\sum_{\tau\le t}\eta_\tau}\Big)^2}_{\text{靠平飞段大积分}\ \sum\eta_\tau\ \text{消灭}}+\underbrace{\frac{\sigma^2}{4}\sum_{j\in\text{陡峭石壁}}\eta_t}_{\text{靠末期}\ \eta_t\to\eta_{\min}\ \text{清零}}$$</div>
+          <div class="explain">误差分两块：平缓河道里离终点还有多远，取决于一路走来的步长总和 $\sum\eta_\tau$；陡峭石壁上的乱蹦罚分，只取决于当下的步长 $\eta_t$。WSD 让大步长坚持得最久（积分最大），最后十分之一的时间再急刹车把乱蹦清零；余弦退火从一开始就慢慢松油门，积分小了一截。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认（书中脚本参数，$T=200$）：实线是期望损失，定步长卡在约 $6$ 下不来；WSD 前 180 步和定步长重合，最后 20 步急降到约 $0.44$；余弦退火最终约 $2.5$，它从一开始就松油门，平缓河道还没走完；Schedule-Free 约 $0.75$。</li>
+            <li>书中脚本用固定的随机种子，打印的是其中一次运行：WSD 第 175 步约 $36.5$（和定步长一样）、第 200 步约 $0.15$，定步长第 200 步约 $2.6$，Schedule-Free 第 175 步约 $1.5$、第 200 步约 $0.68$。勾选“显示一次随机运行”或点“换一次随机抖动”，可以看到单次运行在期望值附近大幅抖动，排序却和期望值一致。</li>
+            <li>把总步数 $T$ 拉到 600：平缓河道走完了，余弦（约 $0.03$）反而比 WSD（约 $0.15$）更低。WSD 的长处不是终点更低，而是不用提前算死 $T$：平飞段随时可以分出一支去急降。</li>
+            <li>把 WSD 急降比例从 $10\%$ 调到 $20\%$：最终损失略降到约 $0.41$；调到 $50\%$：反而升到约 $0.66$，步长积分变小，平缓河道没走完。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 2 ========================= -->
+  <section class="experiment" id="warmup" data-title="预热：账本先攒够">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">2</span>参数控制台</div>
+        <div id="u-b2"></div>
+        <div id="u-Tw"></div>
+        <div id="u-snr"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <div class="small muted"><b>注意力打分</b>：$p_1=\dfrac{e^{z_1}}{e^{z_1}+e^{z_2}}$，$z_2=0$</div>
+        <div id="u-z"></div>
+        <div class="caption">上半部分：2000 个参数各自的斜率 $g=\mu+\xi$（$\xi\sim\mathcal N(0,1)$，信噪比 $\mu$ 可调），全部用 Adam（$\beta_1=0.9$）。看每一步的“归一化步子” $|\hat m_t|/\sqrt{\hat v_t}$ 平均有多大。</div>
+      </div>
+      <div class="stack">
+        <div class="stats" id="u-stats"></div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c1)">N</span>账本里攒了多少有效样本</div>
+            <div class="viz h260" id="u-neff"></div>
+            <div class="caption">$N_{\text{eff}}(t)=\frac{1-\beta_2^t}{1-\beta_2}$；横线是上限 $1/(1-\beta_2)$，竖线是预热长度 $T_w$。</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c2)">u</span>Adam 头几步的步子最大</div>
+            <div class="viz h260" id="u-u"></div>
+            <div class="caption">平均 $|\hat m_t|/\sqrt{\hat v_t}$。第 1 步恰好等于 $1$（只剩正负号），之后才慢慢降到稳态。</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c4)">Δθ</span>乘上学习率后的真实步长 $\eta_t\cdot|\hat m_t|/\sqrt{\hat v_t}$（以 $\eta_{\max}$ 为单位）</div>
+          <div class="viz h260" id="u-step"></div>
+          <div class="legend"><span><i style="background:var(--c4)"></i>不预热</span><span><i style="background:var(--c3)"></i>线性预热 $T_w$ 步</span><span><i style="background:var(--slate)"></i>虚线：稳态步长</span></div>
+        </div>
+        <div class="row2">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c5)">p</span>Softmax 的“脑梗死”：$p_1(1-p_1)$</div>
+            <div class="viz h260" id="u-soft"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中手算：前两步账本</div>
+            <div id="u-book" style="overflow-x:auto"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$N_{\text{eff}}(t)\approx\frac{1-\beta_2^t}{1-\beta_2}=1+\beta_2+\dots+\beta_2^{t-1}\quad(t\ll\tfrac{1}{1-\beta_2}\ \text{时}\ N_{\text{eff}}\approx t),\qquad \text{建议}\ T_w\ge\frac{1}{1-\beta_2}$$</div>
+          <div class="formula">$$p_1=\frac{e^{z_1}}{e^{z_1}+e^{z_2}},\qquad \frac{\partial p_1}{\partial z_1}=p_1(1-p_1)\ \xrightarrow{\ z_1=50,\ z_2=0\ }\ 0$$</div>
+          <div class="explain">偏差修正只修好了“账本填 0 造成的比例缩水”，变不出数据来。头几步账本里只有一两个样本，分母全凭手气，Adam 的步子接近满格的 $\eta$；稳定以后，噪声在分子里互相抵消，步子才降下来。预热就是让头几百步的 $\eta_t$ 小到不闯祸，先把账本攒扎实，避免一步把注意力打分推进 Softmax 的饱和区。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>默认信噪比 $0.1$：第 1 步的平均步子是 $1$，稳态只有约 $0.2$，不预热时头几百步的步子比稳态大好几倍。</li>
+            <li>把 $T_w$ 拉到 $1000$：绿线从 $0$ 缓缓爬升，整条曲线都压在稳态以下。</li>
+            <li>看手算：$g_1=0.01$、$g_2=1$ 时，还原后的分母 $\sqrt{\hat v_2}\approx0.707$，第 2 步（无动量）迈出 $1.414\eta$。</li>
+            <li>把 $z_1$ 拉到 $50$：$p_1(1-p_1)$ 只剩 $10^{-22}$ 量级，梯度再也传不回去。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 实验 3 ========================= -->
+  <section class="experiment" id="sf" data-title="免调度三人行">
+    <div class="lab-grid">
+      <div class="card controls">
+        <div class="card-title"><span class="dot">3</span>参数控制台</div>
+        <div id="f-noise" style="margin:2px 0 6px"></div>
+        <div id="f-gamma"></div>
+        <div id="f-beta"></div>
+        <div id="f-T"></div>
+        <div id="f-dec"></div>
+        <div class="btn-row"><button class="btn ghost" id="f-book">书中算例</button></div>
+        <div class="caption">一维山谷 $f(w)=\tfrac12w^2$，从 $w_0=2$ 出发，第 $t$ 步算出的斜率是 $g_t=w+\xi_t$。三位 Schedule-Free 角色：探底员 $\mathbf z_t$ 以固定步长 $\gamma$ 大步走，探路员 $\mathbf y_t$ 站在折中位置算斜率，答题员 $\mathbf x_t$ 是探底员走过位置的历史平均。</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c1)">t</span>各位选手的位置<span class="sub" id="f-sub"></span></div>
+          <div class="viz h340" id="f-pos"></div>
+          <div class="legend"><span><i style="background:#9aa5b1"></i>探底员 $z_t$</span><span><i style="background:var(--c2)"></i>探路员 $y_t$</span><span><i style="background:var(--c3)"></i>答题员 $x_t$（Schedule-Free 交卷）</span><span><i style="background:var(--c5)"></i>定步长 SGD</span><span><i style="background:var(--c4)"></i>WSD</span></div>
+        </div>
+        <div class="stats" id="f-stats"></div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--c3)">✍</span>书中手算：三种方案的前几步账本</div>
+          <div style="overflow-x:auto"><table class="data" id="f-table"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--plum)">∑</span>背后的公式</div>
+          <div class="formula">$$\mathbf y_t=(1-\beta)\mathbf z_t+\beta\mathbf x_t,\quad \mathbf g_t=\nabla\mathcal L(\mathbf y_t);\qquad \mathbf z_{t+1}=\mathbf z_t-\gamma\,\mathbf g_t;\qquad \mathbf x_{t+1}=(1-c_{t+1})\mathbf x_t+c_{t+1}\mathbf z_{t+1},\ \ c_{t+1}=\frac{1}{t+1}$$</div>
+          <div class="explain">探底员从不减速，所以在谷底附近左右蹦跶；答题员把探底员走过的所有位置取平均，蹦跶自然抵消，不需要提前知道总步数 $T$，也不需要退火。$\beta$ 越大，探路员越靠近答题员，斜率在更稳的位置上算。</div>
+        </div>
+        <div class="try">
+          <h3>🧪 试一试</h3>
+          <ol>
+            <li>点“书中算例”（交替抖动 $\pm1$，$\gamma=1$，$\beta=0$）：探底员 $-1,+1,-1,\dots$ 来回蹦迪，答题员 $x_2=0$、$x_3=-0.33$、$x_4=0$；WSD 第 3 步收小步长后落在 $0$。</li>
+            <li>换成“随机抖动”并把步数拉到 100：定步长 SGD 一直乱蹦，答题员越来越稳地贴着 $0$。</li>
+            <li>把 $\beta$ 从 $0$ 调到 $0.9$：探路员靠近答题员，早期的大幅震荡明显变小。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
