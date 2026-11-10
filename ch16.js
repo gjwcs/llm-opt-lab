@@ -1,4 +1,4 @@
-/* 第 16 章：教大模型学会深度思考与做数学题 —— 交互实验 */
+/* 第 16 章 强化学习对齐：PPO、DPO 与 GRPO（交互实验） */
 (function () {
   const { COLORS: C, M } = LAB;
   LAB.page({ bookRef: '对应书中 §16.1 策略梯度 · §16.2 PPO 限幅夹子 · §16.3 DPO 与 DeepSeek-R1 的 GRPO' });

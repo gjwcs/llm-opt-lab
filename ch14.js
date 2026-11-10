@@ -1,4 +1,4 @@
-/* 第 14 章：为什么千亿模型会半夜突然崩盘？—— 交互实验 */
+/* 第 14 章 数值稳定：损失尖峰、Z-Loss、QK-Norm 与 FP8（交互实验） */
 (function () {
   const { COLORS: C, M } = LAB;
   LAB.page({ bookRef: '对应书中 §14.1 打分爆炸、梯度裁剪、Z-Loss 与 QK-Norm · §14.2 FP8 随机舍入' });

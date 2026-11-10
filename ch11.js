@@ -1,7 +1,7 @@
-/* 第 11 章：一张游戏显卡怎么训大模型？—— 交互实验 */
+/* 第 11 章：显存瘦身：GaLore、LOMO 与 BAdam（交互实验） */
 (function () {
   const { COLORS: C, M } = LAB;
-  LAB.page({ bookRef: '对应书中 §11.1 7B 模型的显存小票 · §11.2 LoRA 与 GaLore 换走廊 · §11.3 LOMO 与 BAdam · §11.4 五大方案对比' });
+  LAB.page({ bookRef: '对应书中 §11.1 7B 模型的显存账单 · §11.2 LoRA 与 GaLore 换走廊 · §11.3 LOMO 与 BAdam · §11.4 五种方案对比' });
   document.querySelectorAll('.formula').forEach((f) => { f.style.width = '0'; f.style.minWidth = '100%'; });
   const $ = (s) => document.querySelector(s);
   const FONT = getComputedStyle(document.body).getPropertyValue('--font');

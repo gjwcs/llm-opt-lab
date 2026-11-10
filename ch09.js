@@ -1,7 +1,7 @@
-/* 第 9 章：如果峡谷是斜着摆的怎么办？—— 交互实验 */
+/* 第 9 章：二阶预条件：牛顿法、自然梯度、K-FAC 与 Shampoo（交互实验） */
 (function () {
   const { COLORS: C, M } = LAB;
-  LAB.page({ bookRef: '对应书中 §9.1 斜着摆的峡谷与牛顿法 · §9.2 自然梯度与费雪表格 · §9.3 K-FAC 与 Shampoo · §9.4 手算对比' });
+  LAB.page({ bookRef: '对应书中 §9.1 斜着摆的峡谷与牛顿法 · §9.2 自然梯度与费雪矩阵 · §9.3 克罗内克分解：K-FAC 与 Shampoo · §9.4 完整算例' });
   document.querySelectorAll('.formula').forEach((f) => { f.style.width = '0'; f.style.minWidth = '100%'; });
   const $ = (s) => document.querySelector(s);
   const FONT = getComputedStyle(document.body).getPropertyValue('--font');

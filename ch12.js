@@ -1,7 +1,7 @@
-/* 第 12 章：小模型调好的学习率怎么搬给大模型？—— 交互实验 */
+/* 第 12 章：跨规模迁移：最大更新参数化 μP（交互实验） */
 (function () {
   const { COLORS: C, M } = LAB;
-  LAB.page({ bookRef: '对应书中 §12.2–12.3 扔硬币与同号相加 · §12.3 SP、NTK 与 μP · §12.4 全模型 μP 配方 · §12.5 跨宽度迁移算例' });
+  LAB.page({ bookRef: '对应书中 §12.2–12.3 扔硬币与同号相加 · §12.3 SP、NTK 与 μP · §12.4 全模型配方 · §12.5 跨宽度迁移算例' });
   document.querySelectorAll('.formula').forEach((f) => { f.style.width = '0'; f.style.minWidth = '100%'; });
   const $ = (s) => document.querySelector(s);
   const FONT = getComputedStyle(document.body).getPropertyValue('--font');

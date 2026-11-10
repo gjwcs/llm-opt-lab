@@ -1,4 +1,4 @@
-/* 第 15 章：一万张显卡怎么一起训一个大模型？—— 交互实验 */
+/* 第 15 章 分布式训练：梯度累积、ZeRO 与 DiLoCo（交互实验） */
 (function () {
   const { COLORS: C, M } = LAB;
   LAB.page({ bookRef: '对应书中 §15.1 ZeRO 显存账单与梯度累积 · §15.2 Ring All-Reduce 与 DiLoCo' });

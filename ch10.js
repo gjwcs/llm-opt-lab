@@ -1,7 +1,7 @@
-/* 第 10 章：2024–2026 最耀眼的矩阵优化器 —— 交互实验 */
+/* 第 10 章：矩阵正交化：Muon 与 SOAP（交互实验） */
 (function () {
   const { COLORS: C, M } = LAB;
-  LAB.page({ bookRef: '对应书中 §10.1 圆变椭圆与 SVD · §10.2 Muon 的诞生动机 · §10.3 Newton-Schulz 迭代与 SOAP · §10.4 手算 2×2 Muon' });
+  LAB.page({ bookRef: '对应书中 §10.1 奇异值分解：圆变椭圆 · §10.2 Muon：把扁椭圆拍回正圆 · §10.3 Newton-Schulz 迭代与 SOAP · §10.4 完整算例' });
   document.querySelectorAll('.formula').forEach((f) => { f.style.width = '0'; f.style.minWidth = '100%'; });
   const $ = (s) => document.querySelector(s);
   const FONT = getComputedStyle(document.body).getPropertyValue('--font');
